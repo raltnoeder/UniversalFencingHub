@@ -123,21 +123,21 @@ bool ClientConnector::check_connection()
 }
 
 // @throws std::bad_alloc, InetException, OsException, ProtocolException
-bool ClientConnector::fence_poweroff(const std::string& nodename, const std::string& secret)
+bool ClientConnector::fence_action_off(const std::string& nodename, const std::string& secret)
 {
-    return fence_action_impl(MsgType::POWER_OFF, nodename, secret);
+    return fence_action_impl(MsgType::FENCE_OFF, nodename, secret);
 }
 
 // @throws std::bad_alloc, InetException, OsException, ProtocolException
-bool ClientConnector::fence_poweron(const std::string& nodename, const std::string& secret)
+bool ClientConnector::fence_action_on(const std::string& nodename, const std::string& secret)
 {
-    return fence_action_impl(MsgType::POWER_ON, nodename, secret);
+    return fence_action_impl(MsgType::FENCE_ON, nodename, secret);
 }
 
 // @throws std::bad_alloc, InetException, OsException, ProtocolException
-bool ClientConnector::fence_reboot(const std::string& nodename, const std::string& secret)
+bool ClientConnector::fence_action_reboot(const std::string& nodename, const std::string& secret)
 {
-    return fence_action_impl(MsgType::REBOOT, nodename, secret);
+    return fence_action_impl(MsgType::FENCE_REBOOT, nodename, secret);
 }
 
 // @throws InetException, OsException, ProtocolException

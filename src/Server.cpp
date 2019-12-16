@@ -16,9 +16,9 @@
 #include "exceptions.h"
 #include "version.h"
 
-const char* const Server::LABEL_POWER_OFF    = "POWER OFF";
-const char* const Server::LABEL_POWER_ON     = "POWER ON";
-const char* const Server::LABEL_REBOOT       = "REBOOT";
+const char* const Server::LABEL_OFF     = "OFF";
+const char* const Server::LABEL_ON      = "ON";
+const char* const Server::LABEL_REBOOT  = "REBOOT";
 
 Server::Server()
 {
@@ -93,26 +93,26 @@ int Server::run(const int argc, const char* const argv[]) noexcept
     return rc;
 }
 
-bool Server::fence_action_power_off(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept
+bool Server::fence_action_off(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept
 {
-    report_fence_action(LABEL_POWER_OFF, nodename);
-    bool success_flag = plugin_functions.ufh_power_off(nodename.c_str(), nodename.length());
-    report_fence_action_result(LABEL_POWER_OFF, nodename, success_flag);
+    report_fence_action(LABEL_OFF, nodename);
+    bool success_flag = plugin_functions.ufh_fence_off(nodename.c_str(), nodename.length());
+    report_fence_action_result(LABEL_OFF, nodename, success_flag);
     return success_flag;
 }
 
 bool Server::fence_action_power_on(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept
 {
-    report_fence_action(LABEL_POWER_ON, nodename);
-    bool success_flag = plugin_functions.ufh_power_on(nodename.c_str(), nodename.length());
-    report_fence_action_result(LABEL_POWER_ON, nodename, success_flag);
+    report_fence_action(LABEL_ON, nodename);
+    bool success_flag = plugin_functions.ufh_fence_on(nodename.c_str(), nodename.length());
+    report_fence_action_result(LABEL_ON, nodename, success_flag);
     return success_flag;
 }
 
 bool Server::fence_action_reboot(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept
 {
     report_fence_action(LABEL_REBOOT, nodename);
-    bool success_flag = plugin_functions.ufh_reboot(nodename.c_str(), nodename.length());
+    bool success_flag = plugin_functions.ufh_fence_reboot(nodename.c_str(), nodename.length());
     report_fence_action_result(LABEL_REBOOT, nodename, success_flag);
     return success_flag;
 }

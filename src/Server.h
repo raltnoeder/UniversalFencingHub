@@ -12,8 +12,8 @@ class Server
   public:
     typedef bool (Server::*fence_action_method)(const CharBuffer& nodename, const CharBuffer& client_secret);
 
-    static const char* const LABEL_POWER_OFF;
-    static const char* const LABEL_POWER_ON;
+    static const char* const LABEL_OFF;
+    static const char* const LABEL_ON;
     static const char* const LABEL_REBOOT;
 
     std::mutex stdio_lock;
@@ -26,7 +26,7 @@ class Server
     virtual Server& operator=(Server&& orig) = default;
 
     virtual int run(int argc, const char* const argv[]) noexcept;
-    virtual bool fence_action_power_off(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept;
+    virtual bool fence_action_off(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept;
     virtual bool fence_action_power_on(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept;
     virtual bool fence_action_reboot(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept;
     virtual const char* get_version() noexcept;

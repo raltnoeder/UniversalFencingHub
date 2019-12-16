@@ -43,9 +43,9 @@ enum class MsgType : uint16_t
     ECHO_REQUEST    = 0x0,
     ECHO_REPLY      = 0x1,
     VERSION_REQUEST = 0x2,
-    POWER_OFF       = 0x81,
-    POWER_ON        = 0x82,
-    REBOOT          = 0x83,
+    FENCE_OFF       = 0x81,
+    FENCE_ON        = 0x82,
+    FENCE_REBOOT    = 0x83,
     FENCE_SUCCESS   = 0xA0,
     FENCE_FAIL      = 0xA1
 };

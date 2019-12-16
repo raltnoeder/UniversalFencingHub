@@ -325,17 +325,17 @@ bool Client::fence_action(const FenceParameters& params)
 
     if (params.action == ACTION_OFF)
     {
-        rc = connector.fence_poweroff(params.nodename, params.secret);
+        rc = connector.fence_action_off(params.nodename, params.secret);
     }
     else
     if (params.action == ACTION_ON)
     {
-        rc = connector.fence_poweron(params.nodename, params.secret);
+        rc = connector.fence_action_off(params.nodename, params.secret);
     }
     else
     if (params.action == ACTION_REBOOT)
     {
-        rc = connector.fence_reboot(params.nodename, params.secret);
+        rc = connector.fence_action_reboot(params.nodename, params.secret);
     }
     else
     {

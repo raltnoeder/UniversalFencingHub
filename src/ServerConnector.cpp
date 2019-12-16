@@ -519,14 +519,14 @@ void ServerConnector::process_client_message(NetClient* const client)
         case MsgType::VERSION_REQUEST:
             // TODO: Implement version request
             break;
-        case MsgType::POWER_OFF:
-            fence_action(&Server::fence_action_power_off, client);
+        case MsgType::FENCE_OFF:
+            fence_action(&Server::fence_action_off, client);
             break;
-        case MsgType::POWER_ON:
-            fence_action(&Server::fence_action_power_off, client);
+        case MsgType::FENCE_ON:
+            fence_action(&Server::fence_action_off, client);
             break;
-        case MsgType::REBOOT:
-            fence_action(&Server::fence_action_power_off, client);
+        case MsgType::FENCE_REBOOT:
+            fence_action(&Server::fence_action_off, client);
             break;
         case MsgType::FENCE_SUCCESS:
             // fall-through
