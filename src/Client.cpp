@@ -10,6 +10,7 @@
 const char* const Client::DEFAULT_APP_NAME = "fence-universal";
 
 const std::string Client::KEY_ACTION("action");
+const std::string Client::KEY_PROTOCOL("protocol");
 const std::string Client::KEY_IPADDR("ipaddr");
 const std::string Client::KEY_PORT("port");
 const std::string Client::KEY_SECRET("secret");
@@ -90,6 +91,11 @@ void Client::read_parameters(FenceParameters& params)
                 if (param_key == KEY_ACTION)
                 {
                     update_parameter(KEY_ACTION, param_value, params.action, params.have_action);
+                }
+                else
+                if (param_key == KEY_PROTOCOL)
+                {
+                    update_parameter(KEY_PROTOCOL, param_value, params.action, params.have_action);
                 }
                 else
                 if (param_key == KEY_IPADDR)
@@ -226,7 +232,7 @@ void Client::update_parameter(
 
 bool Client::FenceParameters::have_all_parameters() const
 {
-    return have_action && have_ip_address && have_nodename && have_secret && have_tcp_port;
+    return have_action && have_protocol && have_ip_address && have_nodename && have_secret && have_tcp_port;
 }
 
 int main(int argc, char* argv[])

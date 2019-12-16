@@ -17,6 +17,7 @@ class Client
     static const char* const DEFAULT_APP_NAME;
 
     static const std::string KEY_ACTION;
+    static const std::string KEY_PROTOCOL;
     static const std::string KEY_IPADDR;
     static const std::string KEY_PORT;
     static const std::string KEY_SECRET;
@@ -57,6 +58,9 @@ class Client
       public:
         std::string action;
         bool have_action = false;
+
+        std::string protocol;
+        bool have_protocol = false;
 
         std::string ip_address;
         bool have_ip_address = false;
