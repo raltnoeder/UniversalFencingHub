@@ -28,4 +28,7 @@ void init_socket_address(
     socklen_t& address_length
 );
 
+// @throws InetException
+void check_inet_pton_rc(int rc);
+
 #endif /* IP_PARSE_H */

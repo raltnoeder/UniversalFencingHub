@@ -30,24 +30,8 @@ void parse_ipv4(const CharBuffer& ip_string, const CharBuffer& port_string, stru
 {
     uint16_t port_number = parse_port_number(port_string);
     int rc = inet_pton(AF_INET, ip_string.c_str(), &(address.sin_addr));
-    switch (rc)
-    {
-        case 0:
-            // Invalid address string
-            throw InetException(InetException::ErrorId::INVALID_ADDRESS);
-            break;
-        case 1:
-            // Successful sockaddr initialization
-            break;
-        case -1:
-            // Unsupported address family
-            throw InetException(InetException::ErrorId::UNSUPPORTED_AF);
-            break;
-        default:
-            // Undocumented return code
-            throw InetException();
-            break;
-    }
+    check_inet_pton_rc(rc);
+    
     address.sin_family = AF_INET;
     address.sin_port = htons(port_number);
 }
@@ -57,24 +41,8 @@ void parse_ipv6(const CharBuffer& ip_string, const CharBuffer& port_string, stru
 {
     uint16_t port_number = parse_port_number(port_string);
     int rc = inet_pton(AF_INET6, ip_string.c_str(), &(address.sin6_addr));
-    switch (rc)
-    {
-        case 0:
-            // Invalid address string
-            throw InetException(InetException::ErrorId::INVALID_ADDRESS);
-            break;
-        case 1:
-            // Successful sockaddr initialization
-            break;
-        case -1:
-            // Unsupported address family
-            throw InetException(InetException::ErrorId::UNSUPPORTED_AF);
-            break;
-        default:
-            // Undocumented return code
-            throw InetException();
-            break;
-    }
+    check_inet_pton_rc(rc);
+
     address.sin6_family = AF_INET6;
     address.sin6_port = htons(port_number);
     address.sin6_flowinfo = 0;
@@ -120,5 +88,28 @@ void init_socket_address(
     {
         struct sockaddr_in* inet_address = reinterpret_cast<struct sockaddr_in*> (address);
         parse_ipv4(ip_string, port_string, *inet_address);
+    }
+}
+
+// @throws InetException
+void check_inet_pton_rc(const int rc)
+{
+    switch (rc)
+    {
+        case 0:
+            // Invalid address string
+            throw InetException(InetException::ErrorId::INVALID_ADDRESS);
+            break;
+        case 1:
+            // Successful sockaddr initialization
+            break;
+        case -1:
+            // Unsupported address family
+            throw InetException(InetException::ErrorId::UNSUPPORTED_AF);
+            break;
+        default:
+            // Undocumented return code
+            throw InetException();
+            break;
     }
 }
