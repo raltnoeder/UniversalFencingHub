@@ -40,13 +40,13 @@ class ClientConnector
     virtual bool check_connection();
 
     // @throws InetException, OsException, ProtocolException
-    virtual bool fence_action_off(const std::string& nodename, const std::string& secret);
+    virtual bool fence_action_off(const CharBuffer& nodename, const CharBuffer& secret);
 
     // @throws InetException, OsException, ProtocolException
-    virtual bool fence_action_on(const std::string& nodename, const std::string& secret);
+    virtual bool fence_action_on(const CharBuffer& nodename, const CharBuffer& secret);
 
     // @throws InetException, OsException, ProtocolException
-    virtual bool fence_action_reboot(const std::string& nodename, const std::string& secret);
+    virtual bool fence_action_reboot(const CharBuffer& nodename, const CharBuffer& secret);
 
     // @throws InetException, OsException
     virtual void send_message();
@@ -69,8 +69,8 @@ class ClientConnector
     // @throws InetException, OsException, ProtocolException
     bool fence_action_impl(
         const protocol::MsgType& msg_type,
-        const std::string& nodename,
-        const std::string& secret
+        const CharBuffer& nodename,
+        const CharBuffer& secret
     );
 };
 

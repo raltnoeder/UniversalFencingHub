@@ -128,19 +128,19 @@ bool ClientConnector::check_connection()
 }
 
 // @throws std::bad_alloc, InetException, OsException, ProtocolException
-bool ClientConnector::fence_action_off(const std::string& nodename, const std::string& secret)
+bool ClientConnector::fence_action_off(const CharBuffer& nodename, const CharBuffer& secret)
 {
     return fence_action_impl(protocol::MsgType::FENCE_OFF, nodename, secret);
 }
 
 // @throws std::bad_alloc, InetException, OsException, ProtocolException
-bool ClientConnector::fence_action_on(const std::string& nodename, const std::string& secret)
+bool ClientConnector::fence_action_on(const CharBuffer& nodename, const CharBuffer& secret)
 {
     return fence_action_impl(protocol::MsgType::FENCE_ON, nodename, secret);
 }
 
 // @throws std::bad_alloc, InetException, OsException, ProtocolException
-bool ClientConnector::fence_action_reboot(const std::string& nodename, const std::string& secret)
+bool ClientConnector::fence_action_reboot(const CharBuffer& nodename, const CharBuffer& secret)
 {
     return fence_action_impl(protocol::MsgType::FENCE_REBOOT, nodename, secret);
 }
@@ -148,16 +148,17 @@ bool ClientConnector::fence_action_reboot(const std::string& nodename, const std
 // @throws InetException, OsException, ProtocolException
 bool ClientConnector::fence_action_impl(
     const protocol::MsgType& msg_type,
-    const std::string& nodename,
-    const std::string& secret
+    const CharBuffer& nodename,
+    const CharBuffer& secret
 )
 {
     std::string nodename_param(protocol::NODENAME);
-    nodename_param += protocol::KEY_VALUE_SPLIT_SEQ.c_str() + nodename;
+    nodename_param += protocol::KEY_VALUE_SPLIT_SEQ.c_str();
+    nodename_param += nodename.c_str();
 
     std::string secret_param(protocol::SECRET);
-    secret_param += protocol::KEY_VALUE_SPLIT_SEQ.c_str() + secret;
-
+    secret_param += protocol::KEY_VALUE_SPLIT_SEQ.c_str();
+    secret_param += secret.c_str();
 
     header.set_msg_type(msg_type);
     size_t offset = MsgHeader::HEADER_SIZE;

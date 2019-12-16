@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "ClientConnector.h"
+#include "ClientParameters.h"
 
 class Client
 {
@@ -18,27 +19,6 @@ class Client
     };
 
     static const char* const DEFAULT_APP_NAME;
-
-    static const std::string KEY_ACTION;
-    static const std::string KEY_PROTOCOL;
-    static const std::string KEY_IPADDR;
-    static const std::string KEY_PORT;
-    static const std::string KEY_SECRET;
-    static const std::string KEY_NODENAME;
-
-    static const std::string ACTION_OFF;
-    static const std::string ACTION_ON;
-    static const std::string ACTION_REBOOT;
-    static const std::string ACTION_METADATA;
-    static const std::string ACTION_STATUS;
-    static const std::string ACTION_LIST;
-    static const std::string ACTION_MONITOR;
-    static const std::string ACTION_START;
-    static const std::string ACTION_STOP;
-
-    static const char KEY_VALUE_SEPARATOR;
-
-    static const size_t LINE_BUFFER_SIZE;
 
     const char* pgm_call_path;
 
@@ -56,59 +36,17 @@ class Client
     virtual const char* get_version() noexcept;
 
   private:
-    class FenceParameters
-    {
-      public:
-        std::string action;
-        bool have_action = false;
+    // @throws std::bad_alloc, OsException, InetException, ClientException, ArgumentsException
+    ExitCode dispatch_request(ClientParameters& params);
 
-        std::string protocol;
-        bool have_protocol = false;
+    // @throws std::bad_alloc, OsException, InetException, ClientException, ArgumentsException
+    std::unique_ptr<ClientConnector> init_connector(ClientParameters& params);
 
-        std::string ip_address;
-        bool have_ip_address = false;
+    // @throws std::bad_alloc, OsException, InetException, ClientException, ProtocolException, ArgumentsException
+    bool check_server_connection(ClientParameters& params);
 
-        std::string tcp_port;
-        bool have_tcp_port = false;
-
-        std::string secret;
-        bool have_secret = false;
-
-        std::string nodename;
-        bool have_nodename = false;
-
-        bool have_connection_parameters() const;
-        bool have_all_parameters() const;
-    };
-
-    // @throws std::bad_alloc, OsException, ClientException
-    void read_parameters(FenceParameters& params);
-
-    // @throws std::bad_alloc, OsException, InetException, ClientException
-    ExitCode dispatch_request(const FenceParameters& params);
-
-    // @throws std::bad_alloc, ClientException
-    void update_parameter(
-        const std::string& param_key,
-        const std::string& param_value,
-        std::string& param,
-        bool& have_param
-    );
-
-    // @throws std::bad_alloc, OsException, InetException, ClientException
-    std::unique_ptr<ClientConnector> init_connector(const FenceParameters& params);
-
-    // @throws std::bad_alloc, OsException, InetException, ClientException, ProtocolException
-    bool check_server_connection(const FenceParameters& params);
-
-    // @throws std::bad_alloc, OsException, InetException, ClientException, ProtocolException
-    bool fence_action(const FenceParameters& params);
-
-    // @throws std::bad_alloc, ClientException
-    void check_have_connection_parameters(const FenceParameters& params);
-
-    // @throws std::bad_alloc, ClientException
-    void check_have_all_parameters(const FenceParameters& params);
+    // @throws std::bad_alloc, OsException, InetException, ClientException, ProtocolException, ArgumentsException
+    bool fence_action(ClientParameters& params);
 
     void output_metadata();
 };
