@@ -13,7 +13,7 @@ class MsgHeader
     static const size_t MSG_TYPE_OFFSET;
     static const size_t DATA_LENGTH_OFFSET;
 
-    uint16_t        msg_type    = 0;
+    uint16_t        msg_type    = 0xFFFF;
     uint16_t        data_length = 0;
 
     MsgHeader();

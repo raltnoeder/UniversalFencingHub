@@ -14,7 +14,7 @@ MsgHeader::~MsgHeader() noexcept
 
 void MsgHeader::clear() noexcept
 {
-    msg_type    = 0;
+    msg_type    = 0xFFFF;
     data_length = 0;
 }
 
