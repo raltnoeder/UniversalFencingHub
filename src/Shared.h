@@ -38,18 +38,6 @@ namespace constraints
     extern const size_t PORT_PARAM_SIZE;
 }
 
-enum class MsgType : uint16_t
-{
-    ECHO_REQUEST    = 0x0,
-    ECHO_REPLY      = 0x1,
-    VERSION_REQUEST = 0x2,
-    FENCE_OFF       = 0x81,
-    FENCE_ON        = 0x82,
-    FENCE_REBOOT    = 0x83,
-    FENCE_SUCCESS   = 0xA0,
-    FENCE_FAIL      = 0xA1
-};
-
 namespace protocol
 {
     extern const CharBuffer KEY_VALUE_SPLIT_SEQ;
@@ -58,6 +46,18 @@ namespace protocol
     extern const char* const SECRET;
 
     extern const size_t MAX_SECRET_LENGTH;
+
+    enum class MsgType : uint16_t
+    {
+        ECHO_REQUEST    = 0x0,
+        ECHO_REPLY      = 0x1,
+        VERSION_REQUEST = 0x2,
+        FENCE_OFF       = 0x81,
+        FENCE_ON        = 0x82,
+        FENCE_REBOOT    = 0x83,
+        FENCE_SUCCESS   = 0xA0,
+        FENCE_FAIL      = 0xA1
+    };
 
     // @throws ProtocolException
     bool read_field(

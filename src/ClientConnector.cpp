@@ -112,37 +112,37 @@ void ClientConnector::clear_io_buffer() noexcept
 // @throws InetException, OsException
 bool ClientConnector::check_connection()
 {
-    header.set_msg_type(MsgType::ECHO_REQUEST);
+    header.set_msg_type(protocol::MsgType::ECHO_REQUEST);
     header.data_length = MsgHeader::HEADER_SIZE;
 
     send_message();
 
     receive_message();
 
-    return header.is_msg_type(MsgType::ECHO_REPLY);
+    return header.is_msg_type(protocol::MsgType::ECHO_REPLY);
 }
 
 // @throws std::bad_alloc, InetException, OsException, ProtocolException
 bool ClientConnector::fence_action_off(const std::string& nodename, const std::string& secret)
 {
-    return fence_action_impl(MsgType::FENCE_OFF, nodename, secret);
+    return fence_action_impl(protocol::MsgType::FENCE_OFF, nodename, secret);
 }
 
 // @throws std::bad_alloc, InetException, OsException, ProtocolException
 bool ClientConnector::fence_action_on(const std::string& nodename, const std::string& secret)
 {
-    return fence_action_impl(MsgType::FENCE_ON, nodename, secret);
+    return fence_action_impl(protocol::MsgType::FENCE_ON, nodename, secret);
 }
 
 // @throws std::bad_alloc, InetException, OsException, ProtocolException
 bool ClientConnector::fence_action_reboot(const std::string& nodename, const std::string& secret)
 {
-    return fence_action_impl(MsgType::FENCE_REBOOT, nodename, secret);
+    return fence_action_impl(protocol::MsgType::FENCE_REBOOT, nodename, secret);
 }
 
 // @throws InetException, OsException, ProtocolException
 bool ClientConnector::fence_action_impl(
-    const MsgType& msg_type,
+    const protocol::MsgType& msg_type,
     const std::string& nodename,
     const std::string& secret
 )
@@ -165,12 +165,12 @@ bool ClientConnector::fence_action_impl(
     receive_message();
 
     bool rc = false;
-    if (header.is_msg_type(MsgType::FENCE_SUCCESS))
+    if (header.is_msg_type(protocol::MsgType::FENCE_SUCCESS))
     {
         rc = true;
     }
     else
-    if (!header.is_msg_type(MsgType::FENCE_FAIL))
+    if (!header.is_msg_type(protocol::MsgType::FENCE_FAIL))
     {
         throw ProtocolException();
     }

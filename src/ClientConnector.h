@@ -68,7 +68,7 @@ class ClientConnector
 
     // @throws InetException, OsException, ProtocolException
     bool fence_action_impl(
-        const MsgType& msg_type,
+        const protocol::MsgType& msg_type,
         const std::string& nodename,
         const std::string& secret
     );
