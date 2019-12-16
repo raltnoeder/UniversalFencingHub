@@ -111,7 +111,7 @@ void ServerConnector::init()
         throw InetException(InetException::ErrorId::LISTEN_ERROR);
     }
 
-    if (pipe2(selector_trigger, O_CLOEXEC) != 0)
+    if (pipe(selector_trigger) != 0)
     {
         throw OsException(OsException::ErrorId::IPC_ERROR);
     }

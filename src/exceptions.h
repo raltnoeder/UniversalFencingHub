@@ -2,6 +2,7 @@
 #define EXCEPTIONS_H
 
 #include <stdexcept>
+#include <cstdint>
 
 class InetException : public std::exception
 {

@@ -4,6 +4,11 @@
 #include "zero_memory.h"
 #include "exceptions.h"
 
+extern "C"
+{
+    #include <errno.h>
+}
+
 const size_t ClientConnector::IO_BUFFER_SIZE = 1024;
 
 // @throws std::bad_alloc, InetException
