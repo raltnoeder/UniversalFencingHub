@@ -3,7 +3,7 @@
 
 #include <stdexcept>
 
-class InetException : std::exception
+class InetException : public std::exception
 {
   public:
     enum class ErrorId : uint32_t
@@ -28,21 +28,33 @@ class InetException : std::exception
         LISTEN_ERROR        = 9
     };
 
+    static const char* const DSC_UNKNOWN;
+    static const char* const DSC_INVALID_ADDRESS;
+    static const char* const DSC_UNKNOWN_AF;
+    static const char* const DSC_UNSUPPORTED_AF;
+    static const char* const DSC_INVALID_PORT_NUMBER;
+    static const char* const DSC_SOCKET_ERROR;
+    static const char* const DSC_BIND_FAILED;
+    static const char* const DSC_NIO_ERROR;
+    static const char* const DSC_LISTEN_ERROR;
+
   private:
     ErrorId exc_error = ErrorId::UNKNOWN;
 
   public:
     InetException() noexcept;
     InetException(const ErrorId error) noexcept;
-    virtual ~InetException() noexcept;
+    virtual ~InetException() noexcept override;
     InetException(const InetException& other) noexcept = default;
     InetException(InetException&& orig) noexcept = default;
     virtual InetException& operator=(const InetException& other) noexcept = default;
     virtual InetException& operator=(InetException&& orig) noexcept = default;
     virtual const ErrorId get_error_id() const noexcept;
+    virtual const char* get_error_description() const noexcept;
+    virtual const char* what() const noexcept override;
 };
 
-class OsException : std::exception
+class OsException : public std::exception
 {
   public:
     enum class ErrorId : uint32_t
@@ -54,18 +66,24 @@ class OsException : std::exception
         IO_ERROR            = 2
     };
 
+    static const char* const DSC_UNKNOWN;
+    static const char* const DSC_INVALID_SELECT_FD;
+    static const char* const DSC_IO_ERROR;
+
   private:
     ErrorId exc_error = ErrorId::UNKNOWN;
 
   public:
     OsException() noexcept;
     OsException(const ErrorId error) noexcept;
-    virtual ~OsException() noexcept;
+    virtual ~OsException() noexcept override;
     OsException(const OsException& other) noexcept = default;
     OsException(OsException&& orig) noexcept = default;
     virtual OsException& operator=(const OsException& other) = default;
     virtual OsException& operator=(OsException&& other) = default;
     virtual const ErrorId get_error_id() const noexcept;
+    virtual const char* get_error_description() const noexcept;
+    virtual const char* what() const noexcept override;
 };
 
 #endif /* EXCEPTIONS_H */
