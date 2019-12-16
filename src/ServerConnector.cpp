@@ -84,54 +84,6 @@ ServerConnector::~ServerConnector() noexcept
     close_fd(socket_fd);
 }
 
-// @throws std::bad_alloc
-ServerConnector::NetClient::NetClient():
-    key_buffer(FIELD_SIZE),
-    value_buffer(FIELD_SIZE),
-    node_name(NODE_NAME_SIZE)
-{
-    io_buffer_mgr = std::unique_ptr<char[]>(new char[IO_BUFFER_SIZE]);
-    io_buffer = io_buffer_mgr.get();
-}
-
-ServerConnector::NetClient::~NetClient()
-{
-}
-
-void ServerConnector::NetClient::clear() noexcept
-{
-    zero_memory(reinterpret_cast<char*> (address), static_cast<size_t> (address_length));
-    socket_fd       = SOCKET_FD_NONE;
-    current_phase   = Phase::RECV;
-    io_state        = IoOp::NOOP;
-    header.clear();
-    have_header     = false;
-    node_name.wipe();
-    key_buffer.wipe();
-    value_buffer.wipe();
-    clear_io_buffer();
-}
-
-void ServerConnector::NetClient::clear_io_buffer() noexcept
-{
-    io_offset = 0;
-    zero_memory(io_buffer, IO_BUFFER_SIZE);
-}
-
-ServerConnector::WorkerThreadInvocation::WorkerThreadInvocation(ServerConnector* const connector)
-{
-    invocation_target = connector;
-}
-
-ServerConnector::WorkerThreadInvocation::~WorkerThreadInvocation() noexcept
-{
-}
-
-void ServerConnector::WorkerThreadInvocation::run() noexcept
-{
-    invocation_target->process_action_queue();
-}
-
 // @throws InetException
 void ServerConnector::run(WorkerPool& thread_pool)
 {
@@ -597,4 +549,38 @@ void ServerConnector::close_fd(int& fd) noexcept
         while (rc != 0 && errno == EINTR);
         fd = SOCKET_FD_NONE;
     }
+}
+
+// @throws std::bad_alloc
+ServerConnector::NetClient::NetClient():
+    key_buffer(FIELD_SIZE),
+    value_buffer(FIELD_SIZE),
+    node_name(NODE_NAME_SIZE)
+{
+    io_buffer_mgr = std::unique_ptr<char[]>(new char[IO_BUFFER_SIZE]);
+    io_buffer = io_buffer_mgr.get();
+}
+
+ServerConnector::NetClient::~NetClient()
+{
+}
+
+void ServerConnector::NetClient::clear() noexcept
+{
+    zero_memory(reinterpret_cast<char*> (address), static_cast<size_t> (address_length));
+    socket_fd       = SOCKET_FD_NONE;
+    current_phase   = Phase::RECV;
+    io_state        = IoOp::NOOP;
+    header.clear();
+    have_header     = false;
+    node_name.wipe();
+    key_buffer.wipe();
+    value_buffer.wipe();
+    clear_io_buffer();
+}
+
+void ServerConnector::NetClient::clear_io_buffer() noexcept
+{
+    io_offset = 0;
+    zero_memory(io_buffer, IO_BUFFER_SIZE);
 }

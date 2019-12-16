@@ -12,6 +12,7 @@
 #include "MsgHeader.h"
 #include "Queue.h"
 #include "WorkerPool.h"
+#include "WorkerThreadInvocation.h"
 
 extern "C"
 {
@@ -20,8 +21,12 @@ extern "C"
     #include <sys/select.h>
 }
 
+class WorkerThreadInvocation;
+
 class ServerConnector
 {
+    friend class WorkerThreadInvocation;
+
   public:
     static const size_t MAX_CONNECTIONS;
     static const size_t MAX_CONNECTION_BACKLOG;
@@ -84,22 +89,6 @@ class ServerConnector
         virtual NetClient& operator=(NetClient&& orig) = default;
         virtual void clear() noexcept;
         virtual void clear_io_buffer() noexcept;
-    };
-
-    class WorkerThreadInvocation : public WorkerPool::WorkerPoolExecutor
-    {
-      private:
-        ServerConnector* invocation_target;
-
-      public:
-        WorkerThreadInvocation(ServerConnector* connector);
-        virtual ~WorkerThreadInvocation() noexcept;
-        WorkerThreadInvocation(const WorkerThreadInvocation& other) = default;
-        WorkerThreadInvocation(WorkerThreadInvocation&& orig) = default;
-        virtual WorkerThreadInvocation& operator=(const WorkerThreadInvocation& other) = default;
-        virtual WorkerThreadInvocation& operator=(WorkerThreadInvocation&& orig) = default;
-
-        virtual void run() noexcept;
     };
 
     using ClientAlloc = GenAlloc<NetClient>;
