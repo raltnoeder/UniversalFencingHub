@@ -49,7 +49,10 @@ namespace constraints
     extern const size_t PROTOCOL_PARAM_SIZE;
     extern const size_t IP_ADDR_PARAM_SIZE;
     extern const size_t PORT_PARAM_SIZE;
+    extern const size_t SECRET_PARAM_SIZE;
+    extern const size_t NODENAME_PARAM_SIZE;
     extern const size_t MODULE_PARAM_SIZE;
+    extern const size_t ACTION_PARAM_SIZE;
 }
 
 namespace protocol
