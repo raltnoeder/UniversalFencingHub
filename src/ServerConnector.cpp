@@ -366,48 +366,44 @@ bool ServerConnector::receive_message(NetClient* const client)
         req_read_size,
         0 // Flags
     );
-    if (read_size == -1)
-    {
-        // IO Error
-        close_connection(client);
-    }
-    else
-    if (read_size == 0)
-    {
-        // End of stream
-        close_connection(client);
-    }
-    else
+    if (read_size > 0)
     {
         client->io_offset += static_cast<size_t> (read_size);
-    }
 
-    if (client->have_header)
-    {
-        if (client->io_offset >= client->header.data_length)
+        if (client->have_header)
         {
-            recv_complete_flag = true;
+            if (client->io_offset >= client->header.data_length)
+            {
+                recv_complete_flag = true;
+            }
+        }
+        else
+        if (client->io_offset >= MsgHeader::HEADER_SIZE)
+        {
+            client->header.msg_type = MsgHeader::bytes_to_field_value(
+                client->io_buffer, MsgHeader::MSG_TYPE_OFFSET
+            );
+            client->header.data_length = std::min(
+                static_cast<uint16_t> (NetClient::IO_BUFFER_SIZE),
+                MsgHeader::bytes_to_field_value(
+                    client->io_buffer, MsgHeader::DATA_LENGTH_OFFSET
+                )
+            );
+            client->have_header = true;
+
+            if (client->header.data_length <= MsgHeader::HEADER_SIZE)
+            {
+                recv_complete_flag = true;
+            }
         }
     }
     else
-    if (client->io_offset >= MsgHeader::HEADER_SIZE)
     {
-        client->header.msg_type = MsgHeader::bytes_to_field_value(
-            client->io_buffer, MsgHeader::MSG_TYPE_OFFSET
-        );
-        client->header.data_length = std::min(
-            static_cast<uint16_t> (NetClient::IO_BUFFER_SIZE),
-            MsgHeader::bytes_to_field_value(
-                client->io_buffer, MsgHeader::DATA_LENGTH_OFFSET
-            )
-        );
-        client->have_header = true;
-
-        if (client->header.data_length <= MsgHeader::HEADER_SIZE)
-        {
-            recv_complete_flag = true;
-        }
+        // read_size == 0: End of stream
+        // read_size <= 0: I/O error
+        close_connection(client);
     }
+
     return recv_complete_flag;
 }
 
@@ -444,20 +440,23 @@ bool ServerConnector::send_message(NetClient* const client)
         req_write_size,
         0 // Flags
     );
-    if (write_size > 0)
-    {
-        client->io_offset += static_cast<size_t> (write_size);
-    }
-    else
     if (write_size == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
     {
         close_connection(client);
     }
-
-    if (client->io_offset >= client->header.data_length)
+    else
     {
-        send_complete_flag = true;
+        if (write_size > 0)
+        {
+            client->io_offset += static_cast<size_t> (write_size);
+        }
+
+        if (client->io_offset >= client->header.data_length)
+        {
+            send_complete_flag = true;
+        }
     }
+
     return send_complete_flag;
 }
 
