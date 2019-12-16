@@ -1,7 +1,10 @@
 #include "ClientConnector.h"
 
 #include "ip_parse.h"
+#include "zero_memory.h"
 #include "exceptions.h"
+
+const size_t ClientConnector::IO_BUFFER_SIZE = 1024;
 
 // @throws std::bad_alloc, InetException
 ClientConnector::ClientConnector(
@@ -11,6 +14,9 @@ ClientConnector::ClientConnector(
 )
 {
     init_socket_address(protocol_string, ip_string, port_string, socket_domain, address_mgr, address, address_length);
+
+    io_buffer_mgr = std::unique_ptr<char[]>(new char[IO_BUFFER_SIZE]);
+    io_buffer = io_buffer_mgr.get();
 }
 
 ClientConnector::~ClientConnector() noexcept
@@ -96,4 +102,24 @@ void ClientConnector::connect_to_server()
 void ClientConnector::disconnect_from_server() noexcept
 {
     sys::close_fd(socket_fd);
+}
+
+void ClientConnector::clear_io_buffer() noexcept
+{
+    zero_memory(io_buffer, IO_BUFFER_SIZE);
+}
+
+bool ClientConnector::check_connection()
+{
+    bool rc = false;
+
+    header.msg_type = static_cast<uint16_t> (msgtype::ECHO_REQUEST);
+    header.data_length = 0;
+    header.field_value_to_bytes(header.msg_type, io_buffer, MsgHeader::MSG_TYPE_OFFSET);
+    header.field_value_to_bytes(header.data_length, io_buffer, MsgHeader::DATA_LENGTH_OFFSET);
+
+    // TODO: send request
+    // TODO: receive reply
+
+    return rc;
 }

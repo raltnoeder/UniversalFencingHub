@@ -15,6 +15,8 @@ extern "C"
 class ClientConnector
 {
   public:
+    static const size_t IO_BUFFER_SIZE;
+
     // @throws std::bad_alloc, InetException
     ClientConnector(
         const CharBuffer& protocol_string,
@@ -28,9 +30,14 @@ class ClientConnector
     virtual ClientConnector& operator=(ClientConnector&& orig) = default;
 
     // @throws InetException, OsException
-    void connect_to_server();
+    virtual void connect_to_server();
 
-    void disconnect_from_server() noexcept;
+    virtual void disconnect_from_server() noexcept;
+
+    virtual void clear_io_buffer() noexcept;
+
+    // @throws InetException, OsException
+    virtual bool check_connection();
 
   private:
     std::unique_ptr<char[]> address_mgr;
@@ -38,7 +45,6 @@ class ClientConnector
 
     char*               io_buffer       = nullptr;
     MsgHeader           header;
-    bool                have_header     = false;
 
     struct sockaddr*    address         = nullptr;
     socklen_t           address_length  = 0;
