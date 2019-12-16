@@ -8,6 +8,7 @@
 #include "ip_parse.h"
 #include "zero_memory.h"
 #include "exceptions.h"
+#include "socket_setup.h"
 
 extern "C"
 {
@@ -114,6 +115,9 @@ void ServerConnector::init()
     {
         throw InetException(InetException::ErrorId::SOCKET_ERROR);
     }
+
+    std::cout << "ServerConnector: Setting socket options" << std::endl;
+    socket_setup::set_no_linger(socket_fd);
 
     std::cout << "ServerConnector: Binding server socket" << std::endl;
     if (bind(socket_fd, address, address_length) != 0)
@@ -233,9 +237,10 @@ void ServerConnector::selector_loop(WorkerPool& thread_pool)
         }
 
         // Perform pending client I/O operations
+        std::cout << "ServerConnector: Performing pending client actions" << std::endl;
         {
-            std::cout << "ServerConnector: Performing pending client actions" << std::endl;
             std::unique_lock<std::mutex> lock(com_queue_lock);
+
             NetClient* client = com_queue.get_first();
             NetClient* next_client = nullptr;
             while (client != nullptr)
@@ -256,16 +261,27 @@ void ServerConnector::selector_loop(WorkerPool& thread_pool)
                     std::cout << "ServerConnector: Client with socket_fd = " << client->socket_fd << ": " <<
                         "Receiving data" << std::endl;
                     // Client ready for receive
-                    bool pending = receive_message(client);
-                    if (pending)
+                    bool recv_complete = receive_message(client);
+                    if (recv_complete)
                     {
-                        com_queue.remove(client);
-                        client->io_state = NetClient::IoOp::NOOP;
-                        client->current_phase = NetClient::Phase::PENDING;
+                        std::cout << "ServerConnector: Client with socket_fd = " << client->socket_fd <<
+                            ": Receive complete" << std::endl;
+                        client->current_phase = client->next_phase;
 
-                        std::unique_lock<std::mutex> action_lock(action_queue_lock);
-                        action_queue.add_last(client);
-                        thread_pool.notify();
+                        if (client->current_phase == NetClient::Phase::CANCELED)
+                        {
+                            close_connection(client);
+                        }
+                        else
+                        if (client->current_phase == NetClient::Phase::PENDING)
+                        {
+                            com_queue.remove(client);
+                            client->io_state = NetClient::IoOp::NOOP;
+
+                            std::unique_lock<std::mutex> action_lock(action_queue_lock);
+                            action_queue.add_last(client);
+                            thread_pool.notify();
+                        }
                     }
                 }
                 else
@@ -274,7 +290,25 @@ void ServerConnector::selector_loop(WorkerPool& thread_pool)
                     std::cout << "ServerConnector: Client with socket_fd = " << client->socket_fd << ": " <<
                         "Sending data" << std::endl;
                     // Client ready for send
-                    send_message(client);
+                    bool send_complete = send_message(client);
+                    if (send_complete)
+                    {
+                        std::cout << "ServerConnector: Client with socket_fd = " << client->socket_fd <<
+                            ": Send complete" << std::endl;
+                        client->current_phase = client->next_phase;
+
+                        if (client->current_phase == NetClient::Phase::CANCELED)
+                        {
+                            close_connection(client);
+                        }
+                        else
+                        if (client->current_phase == NetClient::Phase::RECV)
+                        {
+                            client->clear_io_buffer();
+                            client->next_phase = NetClient::Phase::PENDING;
+                            client->io_state = NetClient::IoOp::READ;
+                        }
+                    }
                 }
 
                 client = next_client;
@@ -354,6 +388,7 @@ void ServerConnector::accept_connection()
         new_client_ptr->io_state = NetClient::IoOp::READ;
         std::cout << "ServerConnector: Client assign current_phase" << std::endl;
         new_client_ptr->current_phase = NetClient::Phase::RECV;
+        new_client_ptr->next_phase = NetClient::Phase::PENDING;
 
         std::cout << "ServerConnector: Queueing client object" << std::endl;
         {
@@ -386,7 +421,7 @@ void ServerConnector::close_connection(NetClient* const client)
 
 bool ServerConnector::receive_message(NetClient* const client)
 {
-    bool pending_flag = false;
+    bool recv_complete_flag = false;
 
     const size_t req_read_size = client->io_offset < MsgHeader::HEADER_SIZE ?
         MsgHeader::HEADER_SIZE - client->io_offset :
@@ -415,11 +450,12 @@ bool ServerConnector::receive_message(NetClient* const client)
         client->io_offset += static_cast<size_t> (read_size);
     }
 
+    std::cout << "io_offset = " << client->io_offset << std::endl;
     if (client->have_header)
     {
         if (client->io_offset >= client->header.data_length)
         {
-            pending_flag = true;
+            recv_complete_flag = true;
         }
     }
     else
@@ -437,12 +473,19 @@ bool ServerConnector::receive_message(NetClient* const client)
         client->have_header = true;
         std::cout << "ServerConnector: Message type = " << client->header.msg_type << ", data length = " <<
             client->header.data_length << std::endl;
+
+        if (client->header.data_length <= MsgHeader::HEADER_SIZE)
+        {
+            recv_complete_flag = true;
+        }
     }
-    return pending_flag;
+    return recv_complete_flag;
 }
 
-void ServerConnector::send_message(NetClient* const client)
+bool ServerConnector::send_message(NetClient* const client)
 {
+    bool send_complete_flag = false;
+
     std::cout << "ServerConnector: send_message(...): Client socket_fd = " << client->socket_fd <<
         ", io_offset = " << client->io_offset << std::endl;
     if (!client->have_header)
@@ -485,14 +528,12 @@ void ServerConnector::send_message(NetClient* const client)
         close_connection(client);
     }
 
+    std::cout << "io_offset = " << client->io_offset << std::endl;
     if (client->io_offset >= client->header.data_length)
     {
-        std::cout << "ServerConnector: Client with socket_fd = " << client->socket_fd << ": Send complete" <<
-            std::endl;
-        client->clear_io_buffer();
-        client->current_phase = NetClient::Phase::RECV;
-        client->io_state = NetClient::IoOp::READ;
+        send_complete_flag = true;
     }
+    return send_complete_flag;
 }
 
 WorkerPool::WorkerPoolExecutor* ServerConnector::get_worker_thread_invocation() noexcept
@@ -556,16 +597,28 @@ void ServerConnector::process_client_message(NetClient* const client)
     switch (static_cast<msgtype> (client->header.msg_type))
     {
         case msgtype::ECHO_REQUEST:
+            std::cout << "msgtype = ECHO_REQUEST" << std::endl;
+            client->clear_io_buffer();
+            client->header.msg_type = static_cast<uint16_t> (msgtype::ECHO_REPLY);
+            client->header.data_length = MsgHeader::HEADER_SIZE;
+            client->current_phase = NetClient::Phase::SEND;
+            client->next_phase = NetClient::Phase::RECV;
+            client->io_state = NetClient::IoOp::WRITE;
             break;
         case msgtype::VERSION_REQUEST:
+            std::cout << "msgtype = VERSION_REQUEST" << std::endl;
+            // TODO: Implement version request
             break;
         case msgtype::POWER_OFF:
+            std::cout << "msgtype = POWER_OFF" << std::endl;
             fence_action(&Server::fence_action_power_off, client);
             break;
         case msgtype::POWER_ON:
+            std::cout << "msgtype = POWER_ON" << std::endl;
             fence_action(&Server::fence_action_power_off, client);
             break;
         case msgtype::REBOOT:
+            std::cout << "msgtype = REBOOT" << std::endl;
             fence_action(&Server::fence_action_power_off, client);
             break;
         case msgtype::FENCE_SUCCESS:
@@ -615,7 +668,10 @@ void ServerConnector::fence_action(const Server::fence_action_method fence, NetC
             client->header.msg_type = success_flag ?
                 static_cast<uint16_t> (msgtype::FENCE_SUCCESS) :
                 static_cast<uint16_t> (msgtype::FENCE_FAIL);
+            client->header.data_length = MsgHeader::HEADER_SIZE;
             client->current_phase = NetClient::Phase::SEND;
+            // FIXME: For debugging, disconnect after replying; should probably go back to RECV for production release
+            client->next_phase = NetClient::Phase::CANCELED;
             client->io_state = NetClient::IoOp::WRITE;
         }
     }
@@ -692,6 +748,7 @@ void ServerConnector::NetClient::clear() noexcept
     zero_memory(reinterpret_cast<char*> (address), static_cast<size_t> (address_length));
     socket_fd       = sys::FD_NONE;
     current_phase   = Phase::RECV;
+    next_phase      = Phase::PENDING;
     io_state        = IoOp::NOOP;
     header.clear();
     node_name.wipe();

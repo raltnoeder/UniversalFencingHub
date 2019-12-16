@@ -78,6 +78,7 @@ class ServerConnector
         int                 socket_domain   = AF_INET6;
         int                 socket_fd       = sys::FD_NONE;
         Phase               current_phase   = Phase::RECV;
+        Phase               next_phase      = Phase::PENDING;
         IoOp                io_state        = IoOp::NOOP;
         MsgHeader           header;
         bool                have_header     = false;
@@ -158,7 +159,7 @@ class ServerConnector
 
     void accept_connection();
     bool receive_message(NetClient* const current_client);
-    void send_message(NetClient* const current_client);
+    bool send_message(NetClient* const current_client);
 
     // @throws ProtocolException
     void process_client_message(NetClient* client);
