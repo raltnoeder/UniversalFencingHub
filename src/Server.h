@@ -9,6 +9,8 @@ class Server
   public:
     typedef bool (Server::*fence_action_method)(const CharBuffer& node_name);
 
+    typedef bool (*plugin_call)(const char* nodename, size_t nodename_length);
+
     Server();
     virtual ~Server() noexcept;
     Server(const Server& other) = delete;
