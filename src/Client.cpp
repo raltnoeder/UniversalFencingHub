@@ -2,12 +2,14 @@
 #include "version.h"
 #include "client_exceptions.h"
 #include "Shared.h"
-#include "ClientConnector.h"
+#include "exceptions.h"
 
 #include <new>
-#include <memory>
 #include <stdexcept>
 #include <iostream>
+
+#include <CharBuffer.h>
+#include <RangeException.h>
 
 const char* const Client::DEFAULT_APP_NAME = "fence-universal";
 
@@ -54,14 +56,16 @@ uint32_t Client::get_version_code() noexcept
 // @throws std::bad_alloc, ClientException
 Client::ExitCode Client::run()
 {
+    ExitCode rc = ExitCode::FENCING_FAILURE;
     std::cout << "DEBUG: Client::run() invoked, pgm_call_path = " << pgm_call_path << std::endl;
 
     std::cout << "DEBUG: Invoking read_parameters()" << std::endl;
     FenceParameters params;
     read_parameters(params);
+    rc = dispatch_request(params);
     std::cout << "DEBUG: Returned from read_parameters()" << std::endl;
 
-    return ExitCode::FENCING_FAILURE;
+    return rc;
 }
 
 // @throws std::bad_alloc, OsException, ClientException
@@ -72,67 +76,75 @@ void Client::read_parameters(FenceParameters& params)
 
     try
     {
-        std::cin.exceptions(std::istream::failbit | std::istream::badbit);
-        while (!std::cin.eof())
+        std::cin.exceptions(std::ios_base::badbit);
+        while (std::cin.good())
         {
             std::cin.getline(line_buffer, LINE_BUFFER_SIZE);
             const std::streamsize read_count = std::cin.gcount();
-            std::streamsize split_idx = 0;
-            while (split_idx < read_count && line_buffer[split_idx] != KEY_VALUE_SEPARATOR)
+            if (read_count > 1)
             {
-                ++split_idx;
-            }
-            if (split_idx < read_count)
-            {
-                std::string param_key(line_buffer, split_idx);
-                ++split_idx;
-                std::string param_value(&(line_buffer[split_idx]), read_count - split_idx);
+                const std::streamsize line_length = read_count - 1;
+                std::streamsize split_idx = 0;
+                while (split_idx < line_length && line_buffer[split_idx] != KEY_VALUE_SEPARATOR)
+                {
+                    ++split_idx;
+                }
+                if (split_idx < line_length)
+                {
+                    std::string param_key(line_buffer, split_idx);
+                    ++split_idx;
+                    std::string param_value(&(line_buffer[split_idx]), line_length - split_idx);
 
-                std::cout << "DEBUG: Read parameter " << param_key << " = " << param_value << std::endl;
+                    std::cout << "DEBUG: Read parameter " << param_key << " = " << param_value << std::endl;
 
-                if (param_key == KEY_ACTION)
-                {
-                    update_parameter(KEY_ACTION, param_value, params.action, params.have_action);
+                    if (param_key == KEY_ACTION)
+                    {
+                        update_parameter(KEY_ACTION, param_value, params.action, params.have_action);
+                    }
+                    else
+                    if (param_key == KEY_PROTOCOL)
+                    {
+                        update_parameter(KEY_PROTOCOL, param_value, params.protocol, params.have_protocol);
+                    }
+                    else
+                    if (param_key == KEY_IPADDR)
+                    {
+                        update_parameter(KEY_IPADDR, param_value, params.ip_address, params.have_ip_address);
+                    }
+                    else
+                    if (param_key == KEY_PORT)
+                    {
+                        update_parameter(KEY_PORT, param_value, params.tcp_port, params.have_tcp_port);
+                    }
+                    else
+                    if (param_key == KEY_SECRET)
+                    {
+                        update_parameter(KEY_SECRET, param_value, params.secret, params.have_secret);
+                    }
+                    else
+                    if (param_key == KEY_NODENAME)
+                    {
+                        update_parameter(KEY_NODENAME, param_value, params.nodename, params.have_nodename);
+                    }
+                    else
+                    {
+                        std::cerr << "DEBUG: Unknown parameter key '" << param_key << "' ignored" << std::endl;
+                    }
                 }
                 else
-                if (param_key == KEY_PROTOCOL)
                 {
-                    update_parameter(KEY_PROTOCOL, param_value, params.action, params.have_action);
-                }
-                else
-                if (param_key == KEY_IPADDR)
-                {
-                    update_parameter(KEY_IPADDR, param_value, params.ip_address, params.have_ip_address);
-                }
-                else
-                if (param_key == KEY_PORT)
-                {
-                    update_parameter(KEY_PORT, param_value, params.tcp_port, params.have_tcp_port);
-                }
-                else
-                if (param_key == KEY_SECRET)
-                {
-                    update_parameter(KEY_SECRET, param_value, params.secret, params.have_secret);
-                }
-                else
-                if (param_key == KEY_NODENAME)
-                {
-                    update_parameter(KEY_NODENAME, param_value, params.nodename, params.have_nodename);
-                }
-                else
-                {
-                    std::cerr << "DEBUG: Unknown parameter key '" << param_key << "' ignored" << std::endl;
+                    std::cerr << "DEBUG: Invalid input line '" << line_buffer << "'" << std::endl;
                 }
             }
-            else
-            {
-                std::cerr << "DEBUG: Invalid input line '" << line_buffer << "'" << std::endl;
-            }
+        }
+        if (std::cin.fail() && !std::cin.eof())
+        {
+            throw OsException(OsException::ErrorId::IO_ERROR);
         }
     }
     catch (std::ios_base::failure&)
     {
-        std::cerr << "DEBUG: std::ios_base::failure exception caught" << std::endl;
+        throw OsException(OsException::ErrorId::IO_ERROR);
     }
 }
 
@@ -237,7 +249,7 @@ void Client::update_parameter(
 }
 
 // @throws std::bad_alloc, OsException, InetException, ClientException
-bool Client::check_server_connection(const FenceParameters& params)
+std::unique_ptr<ClientConnector> Client::init_connector(const FenceParameters& params)
 {
     std::unique_ptr<CharBuffer> protocol_string_mgr(new CharBuffer(constraints::PROTOCOL_PARAM_SIZE));
     std::unique_ptr<CharBuffer> ip_addr_string_mgr(new CharBuffer(constraints::IP_ADDR_PARAM_SIZE));
@@ -247,18 +259,58 @@ bool Client::check_server_connection(const FenceParameters& params)
     CharBuffer& ip_addr_string = *ip_addr_string_mgr;
     CharBuffer& port_string = *port_string_mgr;
 
-    protocol_string = params.protocol.c_str();
-    ip_addr_string = params.ip_address.c_str();
-    port_string = params.tcp_port.c_str();
+    try
+    {
+        protocol_string = params.protocol.c_str();
+    }
+    catch (RangeException&)
+    {
+        std::string error_msg;
+        ClientException::param_length_error_msg(error_msg, KEY_PROTOCOL, constraints::PROTOCOL_PARAM_SIZE);
+        throw ClientException(error_msg);
+    }
 
-    std::unique_ptr<ClientConnector> connector_mgr(
+    try
+    {
+        ip_addr_string = params.ip_address.c_str();
+    }
+    catch (RangeException&)
+    {
+        std::string error_msg;
+        ClientException::param_length_error_msg(error_msg, KEY_IPADDR, constraints::IP_ADDR_PARAM_SIZE);
+        throw ClientException(error_msg);
+    }
+
+    try
+    {
+        port_string = params.tcp_port.c_str();
+    }
+    catch (RangeException&)
+    {
+        std::string error_msg;
+        ClientException::param_length_error_msg(error_msg, KEY_PORT, constraints::PORT_PARAM_SIZE);
+        throw ClientException(error_msg);
+    }
+
+
+    return std::unique_ptr<ClientConnector>(
         new ClientConnector(protocol_string, ip_addr_string, port_string)
     );
+}
 
+// @throws std::bad_alloc, OsException, InetException, ClientException
+bool Client::check_server_connection(const FenceParameters& params)
+{
+    bool rc = false;
+
+    std::unique_ptr<ClientConnector> connector_mgr = init_connector(params);
     ClientConnector& connector = *connector_mgr;
-    connector.connect_to_server();
 
-    return false;
+    connector.connect_to_server();
+    rc = connector.check_connection();
+    connector.disconnect_from_server();
+
+    return rc;
 }
 
 bool Client::FenceParameters::have_all_parameters() const
@@ -279,6 +331,14 @@ int main(int argc, char* argv[])
     catch (ClientException& client_exc)
     {
         std::cerr << pgm_call_path << ": " << client_exc.what() << std::endl;
+    }
+    catch (InetException& inet_exc)
+    {
+        std::cerr << pgm_call_path << ": Network communication failed: " << inet_exc.what() << std::endl;
+    }
+    catch (OsException& os_exc)
+    {
+        std::cerr << pgm_call_path << ": System error: " << os_exc.what() << std::endl;
     }
     catch (std::bad_alloc&)
     {

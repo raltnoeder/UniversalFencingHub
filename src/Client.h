@@ -4,6 +4,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <memory>
+
+#include "ClientConnector.h"
 
 class Client
 {
@@ -90,6 +93,9 @@ class Client
         std::string& param,
         bool& have_param
     );
+
+    // @throws std::bad_alloc, OsException, InetException, ClientException
+    std::unique_ptr<ClientConnector> init_connector(const FenceParameters& params);
 
     // @throws std::bad_alloc, OsException, InetException
     bool check_server_connection(const FenceParameters& params);
