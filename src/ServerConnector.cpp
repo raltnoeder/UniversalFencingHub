@@ -144,7 +144,7 @@ void ServerConnector::selector_loop(WorkerPool& thread_pool)
             std::unique_lock<std::mutex> com_lock(com_queue_lock);
 
             // Add the server socket to the read-selectable set
-            if (com_queue.get_size() < MAX_CONNECTIONS)
+            if (client_pool.get_free_count() >= 1)
             {
                 FD_SET(socket_fd, read_fd_set);
                 max_fd = std::max(max_fd, socket_fd);
