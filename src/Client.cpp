@@ -326,6 +326,14 @@ int main(int argc, char* argv[])
     {
         Client instance(pgm_call_path);
         Client::ExitCode instance_rc = instance.run();
+        if (instance_rc == Client::ExitCode::FENCING_SUCCESS)
+        {
+            std::cout << "\x1B[1;32mAction successful\x1b[0m" << std::endl;
+        }
+        else
+        {
+            std::cout << "\x1B[1;31mAction failed\x1B[0m" << std::endl;
+        }
         rc = static_cast<int> (instance_rc);
     }
     catch (ClientException& client_exc)
