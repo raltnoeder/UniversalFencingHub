@@ -98,15 +98,18 @@ int Server::run(const int argc, const char* const argv[]) noexcept
     }
     catch (InetException& inet_exc)
     {
-        std::cerr << ufh::LOGPFX_ERROR << "Network server intialization failed: " << inet_exc.get_error_description() << std::endl;
+        std::cerr << ufh::LOGPFX_ERROR << "Network server intialization failed: " <<
+            inet_exc.get_error_description() << std::endl;
     }
     catch (std::logic_error& log_err)
     {
-        std::cerr << ufh::LOGPFX_ERROR << "Error: Logic error caught by class Server, method run: " << log_err.what() << std::endl;
+        std::cerr << ufh::LOGPFX_ERROR << "Error: Logic error caught by class Server, method run: " <<
+            log_err.what() << std::endl;
     }
     catch (std::exception&)
     {
-        std::cerr << ufh::LOGPFX_ERROR << "Error: Unhandled exception caught in class Server, method run: terminating" << std::endl;
+        std::cerr << ufh::LOGPFX_ERROR << "Error: Unhandled exception caught in class Server, "
+            "method run: terminating" << std::endl;
     }
     std::cout << ufh::LOGPFX_STOP << "End application" << std::endl;
     return rc;
