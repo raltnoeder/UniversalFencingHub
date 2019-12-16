@@ -24,6 +24,7 @@ const char* const Server::LABEL_REBOOT  = "REBOOT";
 Server::Server(SignalHandler& signal_handler_ref)
 {
     stop_signal = &signal_handler_ref;
+    plugin_context = nullptr;
 }
 
 Server::~Server() noexcept
@@ -48,8 +49,10 @@ int Server::run(const int argc, const char* const argv[]) noexcept
         load_plugin(plugin_path.c_str());
 
         std::cout << ufh::LOGPFX_START << "Executing fencing plugin initialization" << std::endl;
-        if (plugin_functions.ufh_plugin_init())
+        plugin::init_rc plugin_rc = plugin_functions.ufh_plugin_init();
+        if (plugin_rc.init_successful)
         {
+            plugin_context = plugin_rc.context;
             std::cout << ufh::LOGPFX_START << "Initializing network connector" << std::endl;
             std::unique_ptr<ServerConnector> connector(
                 new ServerConnector(*this, *stop_signal, protocol, ip_string, port_string)
@@ -80,6 +83,10 @@ int Server::run(const int argc, const char* const argv[]) noexcept
 
             std::cout << ufh::LOGPFX_STOP << "Uninitializing network connector" << std::endl;
             connector = nullptr;
+
+            std::cout << ufh::LOGPFX_STOP << "Uninitializing fencing plugin" << std::endl;
+            plugin_functions.ufh_plugin_destroy(plugin_context);
+            plugin_context = nullptr;
 
             rc = EXIT_SUCCESS;
         }
@@ -118,7 +125,7 @@ int Server::run(const int argc, const char* const argv[]) noexcept
 bool Server::fence_action_off(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept
 {
     report_fence_action(LABEL_OFF, nodename);
-    bool success_flag = plugin_functions.ufh_fence_off(nodename.c_str(), nodename.length());
+    bool success_flag = plugin_functions.ufh_fence_off(plugin_context, nodename.c_str(), nodename.length());
     report_fence_action_result(LABEL_OFF, nodename, success_flag);
     return success_flag;
 }
@@ -126,7 +133,7 @@ bool Server::fence_action_off(const CharBuffer& nodename, const CharBuffer& clie
 bool Server::fence_action_power_on(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept
 {
     report_fence_action(LABEL_ON, nodename);
-    bool success_flag = plugin_functions.ufh_fence_on(nodename.c_str(), nodename.length());
+    bool success_flag = plugin_functions.ufh_fence_on(plugin_context, nodename.c_str(), nodename.length());
     report_fence_action_result(LABEL_ON, nodename, success_flag);
     return success_flag;
 }
@@ -134,7 +141,7 @@ bool Server::fence_action_power_on(const CharBuffer& nodename, const CharBuffer&
 bool Server::fence_action_reboot(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept
 {
     report_fence_action(LABEL_REBOOT, nodename);
-    bool success_flag = plugin_functions.ufh_fence_reboot(nodename.c_str(), nodename.length());
+    bool success_flag = plugin_functions.ufh_fence_reboot(plugin_context, nodename.c_str(), nodename.length());
     report_fence_action_result(LABEL_REBOOT, nodename, success_flag);
     return success_flag;
 }

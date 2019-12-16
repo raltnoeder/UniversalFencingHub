@@ -37,6 +37,7 @@ class Server
     SignalHandler* stop_signal;
 
     plugin::function_table plugin_functions;
+    void* plugin_context;
 
     // @throws OsException
     void load_plugin(const char* const path);

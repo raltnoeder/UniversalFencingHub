@@ -3,12 +3,20 @@
 
 #include <stdbool.h>
 
-bool ufh_plugin_init(void);
+struct ufh_init_rc
+{
+    bool    init_successful;
+    void    *context;
+};
 
-bool ufh_fence_off(const char *nodename, size_t nodename_length);
+ufh_init_rc ufh_plugin_init(void);
 
-bool ufh_fence_on(const char *nodename, size_t nodename_length);
+void ufh_plugin_destroy(void *context);
 
-bool ufh_fence_reboot(const char *nodename, size_t nodename_length);
+bool ufh_fence_off(void *context, const char *nodename, size_t nodename_length);
+
+bool ufh_fence_on(void *context, const char *nodename, size_t nodename_length);
+
+bool ufh_fence_reboot(void *context, const char *nodename, size_t nodename_length);
 
 #endif /* PLUGIN_API_H */
