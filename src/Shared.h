@@ -38,7 +38,7 @@ namespace constraints
     extern const size_t PORT_PARAM_SIZE;
 }
 
-enum class MessageType : uint16_t
+enum class MsgType : uint16_t
 {
     ECHO_REQUEST    = 0x0,
     ECHO_REPLY      = 0x1,

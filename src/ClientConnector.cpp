@@ -112,37 +112,37 @@ void ClientConnector::clear_io_buffer() noexcept
 // @throws InetException, OsException
 bool ClientConnector::check_connection()
 {
-    header.set_msg_type(MessageType::ECHO_REQUEST);
+    header.set_msg_type(MsgType::ECHO_REQUEST);
     header.data_length = MsgHeader::HEADER_SIZE;
 
     send_message();
 
     receive_message();
 
-    return header.is_msg_type(MessageType::ECHO_REPLY);
+    return header.is_msg_type(MsgType::ECHO_REPLY);
 }
 
 // @throws std::bad_alloc, InetException, OsException, ProtocolException
 bool ClientConnector::fence_poweroff(const std::string& nodename, const std::string& secret)
 {
-    return fence_action_impl(MessageType::POWER_OFF, nodename, secret);
+    return fence_action_impl(MsgType::POWER_OFF, nodename, secret);
 }
 
 // @throws std::bad_alloc, InetException, OsException, ProtocolException
 bool ClientConnector::fence_poweron(const std::string& nodename, const std::string& secret)
 {
-    return fence_action_impl(MessageType::POWER_ON, nodename, secret);
+    return fence_action_impl(MsgType::POWER_ON, nodename, secret);
 }
 
 // @throws std::bad_alloc, InetException, OsException, ProtocolException
 bool ClientConnector::fence_reboot(const std::string& nodename, const std::string& secret)
 {
-    return fence_action_impl(MessageType::REBOOT, nodename, secret);
+    return fence_action_impl(MsgType::REBOOT, nodename, secret);
 }
 
 // @throws InetException, OsException, ProtocolException
 bool ClientConnector::fence_action_impl(
-    const MessageType& msg_type,
+    const MsgType& msg_type,
     const std::string& nodename,
     const std::string& secret
 )
@@ -165,12 +165,12 @@ bool ClientConnector::fence_action_impl(
     receive_message();
 
     bool rc = false;
-    if (header.is_msg_type(MessageType::FENCE_SUCCESS))
+    if (header.is_msg_type(MsgType::FENCE_SUCCESS))
     {
         rc = true;
     }
     else
-    if (!header.is_msg_type(MessageType::FENCE_FAIL))
+    if (!header.is_msg_type(MsgType::FENCE_FAIL))
     {
         throw ProtocolException();
     }

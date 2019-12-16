@@ -24,8 +24,8 @@ class MsgHeader
     virtual MsgHeader& operator=(MsgHeader&& orig) = default;
     virtual void clear() noexcept;
 
-    virtual bool is_msg_type(const MessageType value);
-    virtual void set_msg_type(const MessageType value);
+    virtual bool is_msg_type(const MsgType value);
+    virtual void set_msg_type(const MsgType value);
     virtual void serialize(char* io_buffer) const;
     virtual void deserialize(const char* io_buffer);
 

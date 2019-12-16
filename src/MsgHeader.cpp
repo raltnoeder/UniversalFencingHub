@@ -18,12 +18,12 @@ void MsgHeader::clear() noexcept
     data_length = 0;
 }
 
-bool MsgHeader::is_msg_type(const MessageType value)
+bool MsgHeader::is_msg_type(const MsgType value)
 {
     return msg_type == static_cast<uint16_t> (value);
 }
 
-void MsgHeader::set_msg_type(const MessageType value)
+void MsgHeader::set_msg_type(const MsgType value)
 {
     msg_type = static_cast<uint16_t> (value);
 }
