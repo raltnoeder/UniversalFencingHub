@@ -56,6 +56,7 @@ namespace constraints
     const size_t PROTOCOL_PARAM_SIZE    = 10;
     const size_t IP_ADDR_PARAM_SIZE     = 60;
     const size_t PORT_PARAM_SIZE        = 6;
+    const size_t MODULE_PARAM_SIZE      = 1024;
 }
 
 namespace protocol

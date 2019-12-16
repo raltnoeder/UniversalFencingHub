@@ -17,6 +17,7 @@
 #include "server_exceptions.h"
 #include "version.h"
 #include "SignalHandler.h"
+#include "ServerParameters.h"
 
 const char* const Server::LABEL_OFF     = "OFF";
 const char* const Server::LABEL_ON      = "ON";
@@ -41,15 +42,18 @@ int Server::run(const int argc, const char* const argv[]) noexcept
             "Version " << ufh::VERSION_STRING << ", Version code 0x" << std::hex << std::uppercase <<
             std::setw(8) << std::setfill('0') << ufh::VERSION_CODE << "\n\n" << std::flush;
 
-        const CharBuffer protocol("IPV6");
-        const CharBuffer ip_string("::1");
-        const CharBuffer port_string("2111");
-        const CharBuffer plugin_path("./exec_script_plugin.so");
+        ServerParameters params;
+        params.read_parameters(argc, argv);
 
-        PluginMgr plugin(plugin_path.c_str(), this);
+        const CharBuffer& protocol = params.get_protocol();
+        const CharBuffer& bind_address = params.get_bind_address();
+        const CharBuffer& port = params.get_port();
+        const CharBuffer& fence_module = params.get_fence_module();
+
+        PluginMgr plugin(fence_module.c_str(), this);
 
         std::unique_ptr<ServerConnector> connector(
-            new ServerConnector(*this, *stop_signal, protocol, ip_string, port_string)
+            new ServerConnector(*this, *stop_signal, protocol, bind_address, port)
         );
 
         std::unique_ptr<WorkerPool> thread_pool(
@@ -71,6 +75,11 @@ int Server::run(const int argc, const char* const argv[]) noexcept
     catch (std::bad_alloc&)
     {
         std::cerr << ufh::LOGPFX_ERROR << "Initialization failed: Out of memory" << std::endl;
+    }
+    catch (ServerInitException& srv_exc)
+    {
+        std::cerr << ufh::LOGPFX_ERROR << "Server initialization failed" << std::endl;
+        std::cerr << ufh::LOGPFX_CONT << srv_exc.what() << std::endl;
     }
     catch (OsException& os_exc)
     {
