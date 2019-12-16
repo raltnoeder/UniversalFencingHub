@@ -149,34 +149,16 @@ Client::ExitCode Client::dispatch_request(const FenceParameters& params)
 {
     ExitCode rc = ExitCode::FENCING_FAILURE;
 
-    if (!params.have_all_parameters())
+    if (!params.have_action)
     {
-        std::string error_msg("The following required paramters were not specified by the request:\n");
-        if (!params.have_action)
-        {
-            error_msg += "    " + KEY_ACTION + "\n";
-        }
-        if (!params.have_ip_address)
-        {
-            error_msg += "    " + KEY_IPADDR + "\n";
-        }
-        if (!params.have_nodename)
-        {
-            error_msg += "    " + KEY_NODENAME + "\n";
-        }
-        if (!params.have_secret)
-        {
-            error_msg += "    " + KEY_SECRET + "\n";
-        }
-        if (!params.have_tcp_port)
-        {
-            error_msg += "    " + KEY_PORT + "\n";
-        }
+        std::string error_msg("The required parameter \"");
+        error_msg += KEY_ACTION + "\" was not specified by the request";
         throw ClientException(error_msg);
     }
 
     if (params.action == ACTION_OFF || params.action == ACTION_ON || params.action == ACTION_REBOOT)
     {
+        check_have_all_parameters(params);
         rc = fence_action(params) ? ExitCode::FENCING_SUCCESS : ExitCode::FENCING_FAILURE;
     }
     else
@@ -192,6 +174,7 @@ Client::ExitCode Client::dispatch_request(const FenceParameters& params)
     else
     if (params.action == ACTION_MONITOR)
     {
+        check_have_all_parameters(params);
         rc = check_server_connection(params) ? ExitCode::FENCING_SUCCESS : ExitCode::FENCING_FAILURE;
     }
     else
@@ -344,6 +327,40 @@ bool Client::fence_action(const FenceParameters& params)
     connector.disconnect_from_server();
 
     return rc;
+}
+
+// @throws std::bad_alloc, ClientException
+void Client::check_have_all_parameters(const FenceParameters& params)
+{
+    if (!params.have_all_parameters())
+    {
+        std::string error_msg("The following required paramters were not specified by the request:\n");
+        if (!params.have_action)
+        {
+            error_msg += "    " + KEY_ACTION + "\n";
+        }
+        if (!params.have_protocol)
+        {
+            error_msg += "    " + KEY_PROTOCOL + "\n";
+        }
+        if (!params.have_ip_address)
+        {
+            error_msg += "    " + KEY_IPADDR + "\n";
+        }
+        if (!params.have_nodename)
+        {
+            error_msg += "    " + KEY_NODENAME + "\n";
+        }
+        if (!params.have_secret)
+        {
+            error_msg += "    " + KEY_SECRET + "\n";
+        }
+        if (!params.have_tcp_port)
+        {
+            error_msg += "    " + KEY_PORT + "\n";
+        }
+        throw ClientException(error_msg);
+    }
 }
 
 bool Client::FenceParameters::have_all_parameters() const

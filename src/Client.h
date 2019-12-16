@@ -102,6 +102,9 @@ class Client
 
     // @throws std::bad_alloc, OsException, InetException, ClientException, ProtocolException
     bool fence_action(const FenceParameters& params);
+
+    // @throws std::bad_alloc, ClientException
+    void check_have_all_parameters(const FenceParameters& params);
 };
 
 #endif /* CLIENT_H */
