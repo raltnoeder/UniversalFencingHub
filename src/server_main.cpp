@@ -4,6 +4,7 @@
 #include "SignalHandler.h"
 #include "Server.h"
 #include "exceptions.h"
+#include "Shared.h"
 
 int main(int argc, char* argv[])
 {
@@ -17,7 +18,7 @@ int main(int argc, char* argv[])
     }
     catch (std::bad_alloc&)
     {
-        std::cerr << "Initialization failed: Out of memory" << std::endl;
+        std::cerr << ufh::LOGPFX_ERROR << "Initialization failed: Out of memory" << std::endl;
     }
     return rc;
 }

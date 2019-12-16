@@ -22,6 +22,14 @@ namespace sys
 namespace ufh
 {
     extern const char WAKEUP_TRIGGER_BYTE;
+
+    extern const char* const LOGPFX_START;
+    extern const char* const LOGPFX_STOP;
+    extern const char* const LOGPFX_WARNING;
+    extern const char* const LOGPFX_ERROR;
+    extern const char* const LOGPFX_FENCE;
+    extern const char* const LOGPFX_MONITOR;
+    extern const char* const LOGPFX_CONT;
 }
 
 namespace inet

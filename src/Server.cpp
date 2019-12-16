@@ -44,54 +44,71 @@ int Server::run(const int argc, const char* const argv[]) noexcept
         const CharBuffer port_string("2111");
         const CharBuffer plugin_path("./debug_plugin.so");
 
-        std::cout << "Loading fencing plugin, path = " << plugin_path.c_str() << std::endl;
+        std::cout << ufh::LOGPFX_START << "Loading fencing plugin: Plugin path = " << plugin_path.c_str() << std::endl;
         load_plugin(plugin_path.c_str());
 
-        std::cout << "Initializing fencing plugin" << std::endl;
+        std::cout << ufh::LOGPFX_START << "Executing fencing plugin initialization" << std::endl;
         if (plugin_functions.ufh_plugin_init())
         {
-            std::cout << "Initializing ServerConnector" << std::endl;
-            ServerConnector connector(*this, *stop_signal, protocol, ip_string, port_string);
-            std::cout << "Initializing WorkerPool" << std::endl;
-            WorkerPool thread_pool(
-                &(connector.action_queue_lock),
-                ServerConnector::MAX_CONNECTIONS,
-                connector.get_worker_thread_invocation()
+            std::cout << ufh::LOGPFX_START << "Initializing network connector" << std::endl;
+            std::unique_ptr<ServerConnector> connector(
+                new ServerConnector(*this, *stop_signal, protocol, ip_string, port_string)
             );
-            std::cout << "Starting WorkerPool" << std::endl;
-            thread_pool.start();
 
-            std::cout << "Starting ServerConnector" << std::endl;
-            connector.run(thread_pool);
+            std::cout << ufh::LOGPFX_START << "Initializing thread pool" << std::endl;
+            std::unique_ptr<WorkerPool> thread_pool(
+                new WorkerPool(
+                    &(connector->action_queue_lock),
+                    ServerConnector::MAX_CONNECTIONS,
+                    connector->get_worker_thread_invocation()
+                )
+            );
+
+            std::cout << ufh::LOGPFX_START << "Starting worker threads" << std::endl;
+            thread_pool->start();
+
+            std::cout << ufh::LOGPFX_START << "Starting network connector" << std::endl;
+            connector->run(*thread_pool);
+            // Newline after possible "^C" output caused by Ctrl-C being entered on the console, purely cosmetic
+            std::cout << std::endl;
+
+            std::cout << ufh::LOGPFX_STOP << "Stopping worker threads" << std::endl;
+            thread_pool->stop();
+
+            std::cout << ufh::LOGPFX_STOP << "Uninitializing worker pool" << std::endl;
+            thread_pool = nullptr;
+
+            std::cout << ufh::LOGPFX_STOP << "Uninitializing network connector" << std::endl;
+            connector = nullptr;
 
             rc = EXIT_SUCCESS;
         }
         else
         {
-            std::cout << "Error: Plugin initialization failed" << std::endl;
+            std::cout << ufh::LOGPFX_ERROR << "Fencing plugin initialization failed" << std::endl;
         }
     }
     catch (std::bad_alloc&)
     {
-        std::cerr << "Initialization failed: Out of memory" << std::endl;
+        std::cerr << ufh::LOGPFX_ERROR << "Initialization failed: Out of memory" << std::endl;
     }
     catch (OsException& os_exc)
     {
-        std::cerr << "System error: " << os_exc.get_error_description() << std::endl;
+        std::cerr << ufh::LOGPFX_ERROR << "System error: " << os_exc.get_error_description() << std::endl;
     }
     catch (InetException& inet_exc)
     {
-        std::cerr << "Network server intialization failed: " << inet_exc.get_error_description() << std::endl;
+        std::cerr << ufh::LOGPFX_ERROR << "Network server intialization failed: " << inet_exc.get_error_description() << std::endl;
     }
     catch (std::logic_error& log_err)
     {
-        std::cerr << "Error: Logic error caught by class Server, method run: " << log_err.what() << std::endl;
+        std::cerr << ufh::LOGPFX_ERROR << "Error: Logic error caught by class Server, method run: " << log_err.what() << std::endl;
     }
     catch (std::exception&)
     {
-        std::cerr << "Error: Unhandled exception caught in class Server, method run: terminating" << std::endl;
+        std::cerr << ufh::LOGPFX_ERROR << "Error: Unhandled exception caught in class Server, method run: terminating" << std::endl;
     }
-    std::cout << "End application" << std::endl;
+    std::cout << ufh::LOGPFX_STOP << "End application" << std::endl;
     return rc;
 }
 
@@ -132,14 +149,15 @@ uint32_t Server::get_version_code() noexcept
 void Server::report_fence_action(const char* const action, const CharBuffer& nodename)
 {
     std::unique_lock<std::mutex> scope_lock(stdio_lock);
-    std::cout << "Fencing action " << action << " requested for node " << nodename.c_str() << std::endl;
+    std::cout << ufh::LOGPFX_FENCE << "Executing fencing action \"" << action <<
+        "\" affecting node \"" << nodename.c_str() << "\"" << std::endl;
 }
 
 void Server::report_fence_action_result(const char* const action, const CharBuffer& nodename, const bool success_flag)
 {
     std::unique_lock<std::mutex> scope_lock(stdio_lock);
-    std::cout << "Fencing action " << action << " for node " << nodename.c_str() <<
-        (success_flag ? " SUCCEEDED" : " FAILED") << std::endl;
+    std::cout << ufh::LOGPFX_FENCE << "Fencing action \"" << action <<
+        "\" affecting node \"" << nodename.c_str() << (success_flag ? "\" SUCCEEDED" : " FAILED") << std::endl;
 }
 
 // @throws OsException

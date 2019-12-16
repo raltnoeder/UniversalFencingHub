@@ -57,13 +57,10 @@ uint32_t Client::get_version_code() noexcept
 Client::ExitCode Client::run()
 {
     ExitCode rc = ExitCode::FENCING_FAILURE;
-    std::cout << "DEBUG: Client::run() invoked, pgm_call_path = " << pgm_call_path << std::endl;
 
-    std::cout << "DEBUG: Invoking read_parameters()" << std::endl;
     FenceParameters params;
     read_parameters(params);
     rc = dispatch_request(params);
-    std::cout << "DEBUG: Returned from read_parameters()" << std::endl;
 
     return rc;
 }
@@ -95,7 +92,6 @@ void Client::read_parameters(FenceParameters& params)
                     ++split_idx;
                     std::string param_value(&(line_buffer[split_idx]), line_length - split_idx);
 
-                    std::cout << "DEBUG: Read parameter " << param_key << " = " << param_value << std::endl;
 
                     if (param_key == KEY_ACTION)
                     {

@@ -73,7 +73,8 @@ void ServerConnector::run(WorkerPool& thread_pool)
     try
     {
         init();
-        std::cout << "Initialization complete, ready to process requests" << std::endl;
+        std::cout << ufh::LOGPFX_START << "Network connector initialization complete" << std::endl;
+        std::cout << ufh::LOGPFX_MONITOR << "Ready to process requests" << std::endl;
         selector_loop(thread_pool);
     }
     catch (std::exception&)
@@ -343,8 +344,8 @@ void ServerConnector::accept_connection()
     catch (std::bad_alloc&)
     {
         // This section should not be unreachable, since MAX_CONNECTIONS == client_pool size
-        std::cerr << "Unexpected error: ServerConnector: accept_connection: Client object allocation failed" <<
-            std::endl;
+        std::cerr << ufh::LOGPFX_ERROR << "Unexpected error: ServerConnector: accept_connection: "
+            "Client object allocation failed" << std::endl;
     }
 }
 
@@ -504,8 +505,8 @@ void ServerConnector::process_action_queue() noexcept
     }
     catch (std::exception&)
     {
-        std::cerr << "Error: Unhandled exception caught in class ServerConnector, method process_action_queue" <<
-            std::endl;
+        std::cerr << ufh::LOGPFX_ERROR << "Unhandled exception caught in class ServerConnector, "
+            "method process_action_queue" << std::endl;
     }
 }
 
@@ -541,8 +542,8 @@ void ServerConnector::process_client_message(NetClient* const client)
         case protocol::MsgType::ECHO_REPLY:
             // fall-through
         default:
-            std::cerr << "Warning: Invalid request from client with socket_fd = " << client->socket_fd <<
-                ", unknwon msg_type = " << client->header.msg_type << std::endl;
+            std::cerr << ufh::LOGPFX_WARNING << "Invalid request from client with socket_fd = " <<
+                client->socket_fd << ", unknwon msg_type = " << client->header.msg_type << std::endl;
             // Protocol error, kick the client out
             client->current_phase = NetClient::Phase::CANCELED;
             break;
@@ -588,7 +589,8 @@ void ServerConnector::fence_action(const Server::fence_action_method fence, NetC
     }
     catch (ProtocolException&)
     {
-        std::cerr << "Warning: Protocol error, client socket_fd = " << client->socket_fd << std::endl;
+        std::cerr << ufh::LOGPFX_WARNING << "Protocol error, client socket_fd = " <<
+            client->socket_fd << std::endl;
         client->current_phase = NetClient::Phase::CANCELED;
         client->io_state = NetClient::IoOp::NOOP;
     }

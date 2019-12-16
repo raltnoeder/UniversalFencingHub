@@ -29,6 +29,14 @@ namespace sys
 namespace ufh
 {
     const char WAKEUP_TRIGGER_BYTE = static_cast<char> (0xFF);
+
+    const char* const LOGPFX_START      = "[ START ] ";
+    const char* const LOGPFX_STOP       = "[ STOP  ] ";
+    const char* const LOGPFX_WARNING    = "[ WARN  ] ";
+    const char* const LOGPFX_ERROR      = "[ ERROR ] ";
+    const char* const LOGPFX_FENCE      = "[ FENCE ] ";
+    const char* const LOGPFX_MONITOR    = "[ MONTR ] ";
+    const char* const LOGPFX_CONT       = "[  ...  ] ";
 }
 
 namespace inet

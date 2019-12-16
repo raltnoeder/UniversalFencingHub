@@ -1,4 +1,5 @@
 #include "socket_setup.h"
+#include "Shared.h"
 
 #include <iostream>
 
@@ -21,7 +22,8 @@ namespace socket_setup
         );
         if (rc != 0)
         {
-            std::cerr << "Warning: Clearing the SO_LINGER option for socket with socket_fd = " << socket_fd <<
+            std::cerr << ufh::LOGPFX_WARNING <<
+                "Warning: Clearing the SO_LINGER option for socket with socket_fd = " << socket_fd <<
                 " failed" << std::endl;
         }
     }
