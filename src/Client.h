@@ -34,6 +34,8 @@ class Client
 
     static const char KEY_VALUE_SEPARATOR;
 
+    static const size_t LINE_BUFFER_SIZE;
+
     const char* pgm_call_path;
 
     Client(const char* const pgm_call_path_ref);
@@ -48,6 +50,28 @@ class Client
 
     virtual uint32_t get_version_code() noexcept;
     virtual const char* get_version() noexcept;
+
+  private:
+    struct FenceParameters
+    {
+        std::string action;
+        bool have_action = false;
+
+        std::string ip_address;
+        bool have_ip_address = false;
+
+        std::string tcp_port;
+        bool have_tcp_port = false;
+
+        std::string secret;
+        bool have_secret = false;
+
+        std::string nodename;
+        bool have_nodename = false;
+    };
+
+    // @throws std::bad_alloc, OsException
+    void read_parameters(FenceParameters& params);
 };
 
 #endif /* CLIENT_H */
