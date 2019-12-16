@@ -598,6 +598,11 @@ void ServerConnector::fence_action(const Server::fence_action_method fence, NetC
             {
                 client->node_name = client->value_buffer;
             }
+            else
+            if (client->key_buffer == protocol::SECRET)
+            {
+                client->secret = client->value_buffer;
+            }
         }
 
         client->clear_io_buffer();
@@ -605,7 +610,7 @@ void ServerConnector::fence_action(const Server::fence_action_method fence, NetC
 
         if (client->node_name.length() > 0)
         {
-            bool success_flag = (ufh_server->*fence)(client->node_name);
+            bool success_flag = (ufh_server->*fence)(client->node_name, client->secret);
 
             client->header.msg_type = success_flag ?
                 static_cast<uint16_t> (msgtype::FENCE_SUCCESS) :
@@ -671,7 +676,8 @@ void ServerConnector::clients_init_ipv6()
 ServerConnector::NetClient::NetClient():
     key_buffer(FIELD_SIZE),
     value_buffer(FIELD_SIZE),
-    node_name(NODE_NAME_SIZE)
+    node_name(NODE_NAME_SIZE),
+    secret(protocol::MAX_SECRET_LENGTH)
 {
     io_buffer_mgr = std::unique_ptr<char[]>(new char[IO_BUFFER_SIZE]);
     io_buffer = io_buffer_mgr.get();
@@ -689,6 +695,7 @@ void ServerConnector::NetClient::clear() noexcept
     io_state        = IoOp::NOOP;
     header.clear();
     node_name.wipe();
+    secret.wipe();
     key_buffer.wipe();
     value_buffer.wipe();
     clear_io_buffer();

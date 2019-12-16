@@ -66,19 +66,20 @@ int Server::run(const int argc, const char* const argv[]) noexcept
     return rc;
 }
 
-bool Server::fence_action_power_off(const CharBuffer& node_name) noexcept
+bool Server::fence_action_power_off(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept
 {
     std::cout << "Server: action_power_off(...) with node_name = " << node_name.c_str() << std::endl;
+    std::cout << "Server: secret = " << client_secret.c_str() << std::endl;
     return false;
 }
 
-bool Server::fence_action_power_on(const CharBuffer& node_name) noexcept
+bool Server::fence_action_power_on(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept
 {
     std::cout << "Server: action_power_on(...) with node_name = " << node_name.c_str() << std::endl;
     return false;
 }
 
-bool Server::fence_action_reboot(const CharBuffer& node_name) noexcept
+bool Server::fence_action_reboot(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept
 {
     std::cout << "Server: action_reboot(...) with node_name = " << node_name.c_str() << std::endl;
     return false;

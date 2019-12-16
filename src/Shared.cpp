@@ -37,6 +37,9 @@ namespace protocol
     const CharBuffer KEY_VALUE_SPLIT_SEQ("=");
 
     const char* const NODE_NAME = "NODENAME";
+    const char* const SECRET    = "SECRET";
+
+    const size_t MAX_SECRET_LENGTH = 64;
 
     // @throws ProtocolException
     bool read_field(

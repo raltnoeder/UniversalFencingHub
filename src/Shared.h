@@ -40,6 +40,9 @@ namespace protocol
     extern const CharBuffer KEY_VALUE_SPLIT_SEQ;
 
     extern const char* const NODE_NAME;
+    extern const char* const SECRET;
+    
+    extern const size_t MAX_SECRET_LENGTH;
 
     // @throws ProtocolException
     bool read_field(

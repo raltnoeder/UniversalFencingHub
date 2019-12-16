@@ -71,6 +71,7 @@ class ServerConnector
         CharBuffer          value_buffer;
 
         CharBuffer          node_name;
+        CharBuffer          secret;
 
         struct sockaddr*    address         = nullptr;
         socklen_t           address_length  = 0;
