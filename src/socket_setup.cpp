@@ -21,7 +21,7 @@ namespace socket_setup
         );
         if (rc != 0)
         {
-            std::cout << "Warning: Clearing the SO_LINGER option for socket with socket_fd = " << socket_fd <<
+            std::cerr << "Warning: Clearing the SO_LINGER option for socket with socket_fd = " << socket_fd <<
                 " failed" << std::endl;
         }
     }

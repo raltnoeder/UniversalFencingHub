@@ -1,7 +1,5 @@
 #include "WorkerPool.h"
 
-#include <iostream>
-
 WorkerPool::WorkerPool(std::mutex* const lock, const size_t worker_count, WorkerPoolExecutor* const executor)
 {
     pool_lock = lock;
@@ -13,7 +11,6 @@ WorkerPool::WorkerPool(std::mutex* const lock, const size_t worker_count, Worker
 
 WorkerPool::~WorkerPool() noexcept
 {
-    std::cout << "WorkerPool destructor" << std::endl;
     stop_threads();
 }
 
@@ -41,16 +38,13 @@ void WorkerPool::start()
     std::unique_lock<std::mutex> lock(*pool_lock);
     try
     {
-        std::cout << "WorkerPool start()" << std::endl;
         for (size_t idx = 0; idx < pool_size; ++idx)
         {
             pool_threads[idx] = std::thread(&WorkerPool::worker_loop, this);
         }
-        std::cout << "Thread pool initialization successful" << std::endl;
     }
     catch (std::system_error&)
     {
-        std::cout << "Thread pool initialization failed" << std::endl;
         stop_workers = true;
         pool_condition.notify_all();
         lock.unlock();
@@ -89,7 +83,6 @@ void WorkerPool::worker_loop() noexcept
 
 void WorkerPool::stop_threads() noexcept
 {
-    std::cout << "WorkerPool: stop_threads() called" << std::endl;
     {
         std::unique_lock<std::mutex> lock(*pool_lock);
         stop_workers = true;
@@ -100,7 +93,6 @@ void WorkerPool::stop_threads() noexcept
 
 void WorkerPool::await_threads_termination() noexcept
 {
-    std::cout << "WorkerPool: Waiting for active threads" << std::endl;
     for (size_t idx = 0; idx < pool_size; ++idx)
     {
         if (pool_threads[idx].joinable())
@@ -114,5 +106,4 @@ void WorkerPool::await_threads_termination() noexcept
             }
         }
     }
-    std::cout << "WorkerPool: All threads terminated" << std::endl;
 }

@@ -95,6 +95,7 @@ void ServerConnector::run(WorkerPool& thread_pool)
     try
     {
         init();
+        std::cout << "Initialization complete, ready to process requests" << std::endl;
         selector_loop(thread_pool);
     }
     catch (std::exception&)
@@ -109,35 +110,29 @@ void ServerConnector::run(WorkerPool& thread_pool)
 // @throws InetException, OsException
 void ServerConnector::init()
 {
-    std::cout << "ServerConnector: Initializing server socket" << std::endl;
     socket_fd = socket(socket_domain, SOCK_STREAM, 0);
     if (socket_fd < 0)
     {
         throw InetException(InetException::ErrorId::SOCKET_ERROR);
     }
 
-    std::cout << "ServerConnector: Setting socket options" << std::endl;
     socket_setup::set_no_linger(socket_fd);
 
-    std::cout << "ServerConnector: Binding server socket" << std::endl;
     if (bind(socket_fd, address, address_length) != 0)
     {
         throw InetException(InetException::ErrorId::BIND_FAILED);
     }
 
-    std::cout << "ServerConnector: Setting nonblocking I/O mode" << std::endl;
     if (fcntl(socket_fd, F_SETFL, O_NONBLOCK) != 0)
     {
         throw OsException(OsException::ErrorId::NBLK_IO_ERROR);
     }
 
-    std::cout << "ServerConnector: Listening on the server socket" << std::endl;
     if (listen(socket_fd, ServerConnector::MAX_CONNECTION_BACKLOG) != 0)
     {
         throw InetException(InetException::ErrorId::LISTEN_ERROR);
     }
 
-    std::cout << "ServerConnector: Setting up the selector pipe" << std::endl;
     if (pipe2(selector_trigger, O_CLOEXEC) != 0)
     {
         throw OsException(OsException::ErrorId::IPC_ERROR);
@@ -152,18 +147,13 @@ void ServerConnector::init()
 // @throws InetException, OsException
 void ServerConnector::selector_loop(WorkerPool& thread_pool)
 {
-    std::cout << "ServerConnector: Entering server loop" << std::endl;
     while (!stop_flag)
     {
-        std::cout << "ServerConnector: Zeroing file descriptor sets" << std::endl;
         FD_ZERO(read_fd_set);
         FD_ZERO(write_fd_set);
 
-        std::cout << "ServerConnector: Initializing file descriptor sets" << std::endl;
         int max_fd = 0;
         {
-            std::cout << "ServerConnector: Adding selector_trigger fd = " <<
-                selector_trigger[sys::PIPE_READ_END] << " to read_fd_set" << std::endl;
             FD_SET(selector_trigger[sys::PIPE_READ_END], read_fd_set);
             max_fd = std::max(max_fd, selector_trigger[sys::PIPE_READ_END]);
 
@@ -172,14 +162,8 @@ void ServerConnector::selector_loop(WorkerPool& thread_pool)
             // Add the server socket to the read-selectable set
             if (com_queue.get_size() < MAX_CONNECTIONS)
             {
-                std::cout << "ServerConnector: Adding server with socket_fd = " << socket_fd <<
-                    " to read_fd_set" << std::endl;
                 FD_SET(socket_fd, read_fd_set);
                 max_fd = std::max(max_fd, socket_fd);
-            }
-            else
-            {
-                std::cout << "ServerConnector: com_queue is full, size = " << com_queue.get_size() << std::endl;
             }
 
             // Add active clients to the read/write sets
@@ -187,23 +171,18 @@ void ServerConnector::selector_loop(WorkerPool& thread_pool)
             {
                 if (client->io_state == NetClient::IoOp::READ)
                 {
-                    std::cout << "ServerConnector: Adding client with socket_fd = " << client->socket_fd <<
-                        " to read_fd_set" << std::endl;
                     FD_SET(client->socket_fd, read_fd_set);
                     max_fd = std::max(max_fd, client->socket_fd);
                 }
                 else
                 if (client->io_state == NetClient::IoOp::WRITE)
                 {
-                    std::cout << "ServerConnector: Adding client with socket_fd = " << client->socket_fd <<
-                        " to write_fd_set" << std::endl;
                     FD_SET(client->socket_fd, write_fd_set);
                     max_fd = std::max(max_fd, client->socket_fd);
                 }
             }
         }
 
-        std::cout << "ServerConnector: Selecting ready channels" << std::endl;
         // Select ready file descriptors
         if (max_fd >= std::numeric_limits<int>::max())
         {
@@ -215,12 +194,10 @@ void ServerConnector::selector_loop(WorkerPool& thread_pool)
         {
             throw OsException(OsException::ErrorId::IO_ERROR);
         }
-        std::cout << "ServerConnector: select() triggered" << std::endl;
 
         // Accept pending connections
         if (FD_ISSET(socket_fd, read_fd_set) != 0)
         {
-            std::cout << "ServerConnector: Accepting pending connections" << std::endl;
             accept_connection();
         }
 
@@ -237,7 +214,6 @@ void ServerConnector::selector_loop(WorkerPool& thread_pool)
         }
 
         // Perform pending client I/O operations
-        std::cout << "ServerConnector: Performing pending client actions" << std::endl;
         {
             std::unique_lock<std::mutex> lock(com_queue_lock);
 
@@ -251,21 +227,15 @@ void ServerConnector::selector_loop(WorkerPool& thread_pool)
 
                 if (client->current_phase == NetClient::Phase::CANCELED)
                 {
-                    std::cout << "ServerConnector: Client with socket_fd = " << client->socket_fd << ": " <<
-                        "Connection canceled" << std::endl;
                     close_connection(client);
                 }
                 else
                 if (FD_ISSET(client->socket_fd, read_fd_set) != 0)
                 {
-                    std::cout << "ServerConnector: Client with socket_fd = " << client->socket_fd << ": " <<
-                        "Receiving data" << std::endl;
                     // Client ready for receive
                     bool recv_complete = receive_message(client);
                     if (recv_complete)
                     {
-                        std::cout << "ServerConnector: Client with socket_fd = " << client->socket_fd <<
-                            ": Receive complete" << std::endl;
                         client->current_phase = client->next_phase;
 
                         if (client->current_phase == NetClient::Phase::CANCELED)
@@ -287,14 +257,10 @@ void ServerConnector::selector_loop(WorkerPool& thread_pool)
                 else
                 if (FD_ISSET(client->socket_fd, write_fd_set) != 0)
                 {
-                    std::cout << "ServerConnector: Client with socket_fd = " << client->socket_fd << ": " <<
-                        "Sending data" << std::endl;
                     // Client ready for send
                     bool send_complete = send_message(client);
                     if (send_complete)
                     {
-                        std::cout << "ServerConnector: Client with socket_fd = " << client->socket_fd <<
-                            ": Send complete" << std::endl;
                         client->current_phase = client->next_phase;
 
                         if (client->current_phase == NetClient::Phase::CANCELED)
@@ -313,7 +279,6 @@ void ServerConnector::selector_loop(WorkerPool& thread_pool)
 
                 client = next_client;
             }
-            std::cout << "Continuing server loop" << std::endl;
         }
     }
 }
@@ -370,27 +335,20 @@ void ServerConnector::accept_connection()
 {
     try
     {
-        std::cout << "ServerConnector: Allocating client object" << std::endl;
         ClientAlloc::scope_ptr new_client = client_pool.allocate_scope();
         NetClient* new_client_ptr = new_client.get();
         if (new_client_ptr == nullptr)
         {
             throw std::bad_alloc();
         }
-        std::cout << "ServerConnector: Initializing client object" << std::endl;
-        std::cout << "ServerConnector: Client clear()" << std::endl;
+
         new_client_ptr->clear();
-        std::cout << "ServerConnector: Client accept()" << std::endl;
         new_client_ptr->socket_fd = accept(socket_fd, new_client_ptr->address, &(new_client_ptr->address_length));
-        std::cout << "ServerConnector: Client assign socket_domain" << std::endl;
         new_client_ptr->socket_domain = socket_domain;
-        std::cout << "ServerConnector: Client assign io_state" << std::endl;
         new_client_ptr->io_state = NetClient::IoOp::READ;
-        std::cout << "ServerConnector: Client assign current_phase" << std::endl;
         new_client_ptr->current_phase = NetClient::Phase::RECV;
         new_client_ptr->next_phase = NetClient::Phase::PENDING;
 
-        std::cout << "ServerConnector: Queueing client object" << std::endl;
         {
             std::unique_lock<std::mutex> lock(com_queue_lock);
             com_queue.add_last(new_client_ptr);
@@ -400,17 +358,15 @@ void ServerConnector::accept_connection()
     }
     catch (std::bad_alloc&)
     {
-        std::cout << "ServerConnector: Client object allocation failed" << std::endl;
-        // No free NetClient objects
-        // TODO: Log implementation error, this section should not be reached,
-        //       since MAX_CONNECTIONS == client_pool size
+        // This section should not be unreachable, since MAX_CONNECTIONS == client_pool size
+        std::cerr << "Unexpected error: ServerConnector: accept_connection: Client object allocation failed" <<
+            std::endl;
     }
 }
 
 // Caller must have locked the client_queue_lock
 void ServerConnector::close_connection(NetClient* const client)
 {
-    std::cout << "ServerConnector: close_connection() client socket_fd = " << client->socket_fd << std::endl;
     sys::close_fd(client->socket_fd);
 
     com_queue.remove(client);
@@ -435,14 +391,12 @@ bool ServerConnector::receive_message(NetClient* const client)
     if (read_size == -1)
     {
         // IO Error
-        std::cout << "ServerConnector: receive_message(): I/O error" << std::endl;
         close_connection(client);
     }
     else
     if (read_size == 0)
     {
         // End of stream
-        std::cout << "ServerConnector: receive_message(): End of stream" << std::endl;
         close_connection(client);
     }
     else
@@ -450,7 +404,6 @@ bool ServerConnector::receive_message(NetClient* const client)
         client->io_offset += static_cast<size_t> (read_size);
     }
 
-    std::cout << "io_offset = " << client->io_offset << std::endl;
     if (client->have_header)
     {
         if (client->io_offset >= client->header.data_length)
@@ -471,8 +424,6 @@ bool ServerConnector::receive_message(NetClient* const client)
             )
         );
         client->have_header = true;
-        std::cout << "ServerConnector: Message type = " << client->header.msg_type << ", data length = " <<
-            client->header.data_length << std::endl;
 
         if (client->header.data_length <= MsgHeader::HEADER_SIZE)
         {
@@ -486,8 +437,6 @@ bool ServerConnector::send_message(NetClient* const client)
 {
     bool send_complete_flag = false;
 
-    std::cout << "ServerConnector: send_message(...): Client socket_fd = " << client->socket_fd <<
-        ", io_offset = " << client->io_offset << std::endl;
     if (!client->have_header)
     {
         MsgHeader::field_value_to_bytes(
@@ -524,11 +473,9 @@ bool ServerConnector::send_message(NetClient* const client)
     else
     if (write_size == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
     {
-        std::cout << "ServerConnector: send_message(): I/O error" << std::endl;
         close_connection(client);
     }
 
-    std::cout << "io_offset = " << client->io_offset << std::endl;
     if (client->io_offset >= client->header.data_length)
     {
         send_complete_flag = true;
@@ -550,10 +497,6 @@ void ServerConnector::process_action_queue() noexcept
         while (client != nullptr)
         {
             action_queue_lock.unlock();
-
-            // TODO: Perform the action requested by the client
-            std::cout << "Thread " << std::this_thread::get_id() << " is handling client with socket_fd = " <<
-                client->socket_fd << std::endl;
 
             client->current_phase = NetClient::Phase::EXECUTING;
             process_client_message(client);
@@ -586,18 +529,17 @@ void ServerConnector::process_action_queue() noexcept
     }
     catch (std::exception&)
     {
-        // TODO: Log unhandled exception
+        std::cerr << "Error: Unhandled exception caught in class ServerConnector, method process_action_queue" <<
+            std::endl;
     }
 }
 
 // @throws ProtocolException
 void ServerConnector::process_client_message(NetClient* const client)
 {
-    std::cout << "ServerConnector: Enter process_client_message" << std::endl;
     switch (static_cast<msgtype> (client->header.msg_type))
     {
         case msgtype::ECHO_REQUEST:
-            std::cout << "msgtype = ECHO_REQUEST" << std::endl;
             client->clear_io_buffer();
             client->header.msg_type = static_cast<uint16_t> (msgtype::ECHO_REPLY);
             client->header.data_length = MsgHeader::HEADER_SIZE;
@@ -606,19 +548,15 @@ void ServerConnector::process_client_message(NetClient* const client)
             client->io_state = NetClient::IoOp::WRITE;
             break;
         case msgtype::VERSION_REQUEST:
-            std::cout << "msgtype = VERSION_REQUEST" << std::endl;
             // TODO: Implement version request
             break;
         case msgtype::POWER_OFF:
-            std::cout << "msgtype = POWER_OFF" << std::endl;
             fence_action(&Server::fence_action_power_off, client);
             break;
         case msgtype::POWER_ON:
-            std::cout << "msgtype = POWER_ON" << std::endl;
             fence_action(&Server::fence_action_power_off, client);
             break;
         case msgtype::REBOOT:
-            std::cout << "msgtype = REBOOT" << std::endl;
             fence_action(&Server::fence_action_power_off, client);
             break;
         case msgtype::FENCE_SUCCESS:
@@ -628,18 +566,16 @@ void ServerConnector::process_client_message(NetClient* const client)
         case msgtype::ECHO_REPLY:
             // fall-through
         default:
-            std::cout << "ServerConnector: process_client_message: Unknown msg_type = " <<
-                client->header.msg_type << std::endl;
+            std::cerr << "Warning: Invalid request from client with socket_fd = " << client->socket_fd <<
+                ", unknwon msg_type = " << client->header.msg_type << std::endl;
             // Protocol error, kick the client out
             client->current_phase = NetClient::Phase::CANCELED;
             break;
     }
-    std::cout << "ServerConnector: Exit process_client_message" << std::endl;
 }
 
 void ServerConnector::fence_action(const Server::fence_action_method fence, NetClient* const client)
 {
-    std::cout << "ServerConnector: Enter fence_action" << std::endl;
     try
     {
         size_t field_offset = client->header.HEADER_SIZE;
@@ -677,11 +613,10 @@ void ServerConnector::fence_action(const Server::fence_action_method fence, NetC
     }
     catch (ProtocolException&)
     {
-        std::cout << "Protocol error" << std::endl;
+        std::cerr << "Warning: Protocol error, client socket_fd = " << client->socket_fd << std::endl;
         client->current_phase = NetClient::Phase::CANCELED;
         client->io_state = NetClient::IoOp::NOOP;
     }
-    std::cout << "ServerConnector: Exit fence_action" << std::endl;
 }
 
 // @throws std::bad_alloc
