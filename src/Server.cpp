@@ -14,9 +14,7 @@
 #include "ServerConnector.h"
 #include "WorkerPool.h"
 #include "exceptions.h"
-
-const char* const Server::VERSION_STRING = "1.0.0";
-const uint32_t Server::VERSION_CODE = 0x00010000;
+#include "version.h"
 
 const char* const Server::LABEL_POWER_OFF    = "POWER OFF";
 const char* const Server::LABEL_POWER_ON     = "POWER ON";
@@ -36,8 +34,8 @@ int Server::run(const int argc, const char* const argv[]) noexcept
     try
     {
         std::cout << "Universal Fencing Hub Server\n"
-            "Version " << VERSION_STRING << ", Version code 0x" << std::hex << std::uppercase <<
-            std::setw(8) << std::setfill('0') << VERSION_CODE << "\n\n" << std::flush;
+            "Version " << ufh::VERSION_STRING << ", Version code 0x" << std::hex << std::uppercase <<
+            std::setw(8) << std::setfill('0') << ufh::VERSION_CODE << "\n\n" << std::flush;
 
         const CharBuffer protocol("IPV6");
         const CharBuffer ip_string("::1");
@@ -121,12 +119,12 @@ bool Server::fence_action_reboot(const CharBuffer& node_name, const CharBuffer& 
 
 const char* Server::get_version() noexcept
 {
-    return VERSION_STRING;
+    return ufh::VERSION_STRING;
 }
 
-const uint32_t Server::get_version_code() noexcept
+uint32_t Server::get_version_code() noexcept
 {
-    return VERSION_CODE;
+    return ufh::VERSION_CODE;
 }
 
 void Server::report_fence_action(const char* const action, const CharBuffer& node_name)
