@@ -47,7 +47,7 @@ int Server::run(const int argc, const char* const argv[]) noexcept
 
         const CharBuffer& protocol = params.get_protocol();
         const CharBuffer& bind_address = params.get_bind_address();
-        const CharBuffer& port = params.get_port();
+        const CharBuffer& port = params.get_tcp_port();
         const CharBuffer& fence_module = params.get_fence_module();
 
         PluginMgr plugin(fence_module.c_str(), this);

@@ -14,7 +14,7 @@ const size_t ServerParameters::MAX_PARAMETER_SIZE = MAX_KEY_SIZE + 1024 + 1;
 
 const char* const ServerParameters::KEY_PROTOCOL       = "protocol";
 const char* const ServerParameters::KEY_BIND_ADDRESS   = "bind_address";
-const char* const ServerParameters::KEY_PORT           = "port";
+const char* const ServerParameters::KEY_TCP_PORT       = "tcp_port";
 const char* const ServerParameters::KEY_FENCE_MODULE   = "fence_module";
 
 const CharBuffer ServerParameters::OPT_PREFIX("--");
@@ -36,7 +36,7 @@ static std::string missing_parameter_error_msg(const char* const param_key);
 ServerParameters::ServerParameters():
     protocol(constraints::PROTOCOL_PARAM_SIZE),
     bind_address(constraints::IP_ADDR_PARAM_SIZE),
-    port(constraints::PORT_PARAM_SIZE),
+    tcp_port(constraints::PORT_PARAM_SIZE),
     fence_module(constraints::MODULE_PARAM_SIZE)
 {
 }
@@ -77,9 +77,9 @@ void ServerParameters::read_parameters(const int argc, const char* const argv[])
                     update_parameter(key, bind_address, have_bind_address, argument, split_idx);
                 }
                 else
-                if (key == KEY_PORT)
+                if (key == KEY_TCP_PORT)
                 {
-                    update_parameter(key, port, have_port, argument, split_idx);
+                    update_parameter(key, tcp_port, have_tcp_port, argument, split_idx);
                 }
                 else
                 if (key == KEY_FENCE_MODULE)
@@ -131,13 +131,13 @@ CharBuffer& ServerParameters::get_bind_address()
 }
 
 // @throws std::bad_alloc, ServerException
-CharBuffer& ServerParameters::get_port()
+CharBuffer& ServerParameters::get_tcp_port()
 {
-    if (!have_port)
+    if (!have_tcp_port)
     {
-        throw ServerInitException(missing_parameter_error_msg(KEY_PORT));
+        throw ServerInitException(missing_parameter_error_msg(KEY_TCP_PORT));
     }
-    return port;
+    return tcp_port;
 }
 
 // @throws std::bad_alloc, ServerException

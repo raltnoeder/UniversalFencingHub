@@ -11,7 +11,7 @@ class ServerParameters
 
     static const char* const KEY_PROTOCOL;
     static const char* const KEY_BIND_ADDRESS;
-    static const char* const KEY_PORT;
+    static const char* const KEY_TCP_PORT;
     static const char* const KEY_FENCE_MODULE;
 
     static const CharBuffer OPT_PREFIX;
@@ -35,7 +35,7 @@ class ServerParameters
     virtual CharBuffer& get_bind_address();
 
     // @throws std::bad_alloc, ServerException
-    virtual CharBuffer& get_port();
+    virtual CharBuffer& get_tcp_port();
 
     // @throws std::bad_alloc, ServerException
     virtual CharBuffer& get_fence_module();
@@ -47,8 +47,8 @@ class ServerParameters
     CharBuffer  bind_address;
     bool        have_bind_address = false;
 
-    CharBuffer  port;
-    bool        have_port = false;
+    CharBuffer  tcp_port;
+    bool        have_tcp_port = false;
 
     CharBuffer  fence_module;
     bool        have_fence_module = false;
