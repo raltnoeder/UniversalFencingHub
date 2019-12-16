@@ -1,5 +1,6 @@
 #include "client_exceptions.h"
 
+// @throws std::bad_alloc
 ClientException::ClientException(const std::string& error_msg):
     message(error_msg)
 {

@@ -7,6 +7,7 @@
 class ClientException : public std::exception
 {
   public:
+    // @throws std::bad_alloc
     ClientException(const std::string& error_msg);
     virtual ~ClientException() noexcept;
     ClientException(const ClientException& other) = default;
