@@ -58,7 +58,7 @@ namespace protocol
                 const size_t remain_length = io_buffer_data_length - offset - 2;
                 if (field_length <= remain_length)
                 {
-                    field_buffer.append_raw(io_buffer, offset + 2, offset + 2 + field_length);
+                    field_buffer.copy_raw(io_buffer, offset + 2, offset + 2 + field_length);
                     offset += field_length + 2;
                     have_field = true;
                 }
