@@ -13,19 +13,17 @@ class InetException : public std::exception
         // Network address not valid for the selected address family
         INVALID_ADDRESS     = 1,
         // Unknown address family specified
-        UNKNOWN_AF          = 3,
+        UNKNOWN_AF          = 2,
         // Selected address family not supported by the platform
-        UNSUPPORTED_AF      = 4,
+        UNSUPPORTED_AF      = 3,
         // IP port number not valid
-        INVALID_PORT_NUMBER = 5,
+        INVALID_PORT_NUMBER = 4,
         // Network socket error
-        SOCKET_ERROR        = 6,
+        SOCKET_ERROR        = 5,
         // Binding a socket failed
-        BIND_FAILED         = 7,
-        // Error initializing non-blocking I/O
-        NIO_ERROR           = 8,
+        BIND_FAILED         = 6,
         // Setting up server socket with listen(...) failed
-        LISTEN_ERROR        = 9
+        LISTEN_ERROR        = 7
     };
 
     static const char* const DSC_UNKNOWN;
@@ -35,7 +33,6 @@ class InetException : public std::exception
     static const char* const DSC_INVALID_PORT_NUMBER;
     static const char* const DSC_SOCKET_ERROR;
     static const char* const DSC_BIND_FAILED;
-    static const char* const DSC_NIO_ERROR;
     static const char* const DSC_LISTEN_ERROR;
 
   private:
@@ -63,12 +60,18 @@ class OsException : public std::exception
         // Invalid file descriptor for select(...)
         INVALID_SELECT_FD   = 1,
         // I/O error
-        IO_ERROR            = 2
+        IO_ERROR            = 2,
+        // Error setting up nonblocking I/O
+        NBLK_IO_ERROR       = 3,
+        // Setting up the selector failed
+        IPC_ERROR           = 4
     };
 
     static const char* const DSC_UNKNOWN;
     static const char* const DSC_INVALID_SELECT_FD;
     static const char* const DSC_IO_ERROR;
+    static const char* const DSC_NBLK_IO_ERROR;
+    static const char* const DSC_IPC_ERROR;
 
   private:
     ErrorId exc_error = ErrorId::UNKNOWN;

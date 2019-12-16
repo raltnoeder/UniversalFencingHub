@@ -8,7 +8,6 @@ const char* const InetException::DSC_UNSUPPORTED_AF         = "Selected address 
 const char* const InetException::DSC_INVALID_PORT_NUMBER    = "IP port number not valid";
 const char* const InetException::DSC_SOCKET_ERROR           = "Network socket error";
 const char* const InetException::DSC_BIND_FAILED            = "Binding a socket failed";
-const char* const InetException::DSC_NIO_ERROR              = "Non-blocking I/O initialization failed";
 const char* const InetException::DSC_LISTEN_ERROR           = "Server socket listen(...) failed";
 
 InetException::InetException() noexcept
@@ -57,9 +56,6 @@ const char* InetException::get_error_description() const noexcept
         case ErrorId::BIND_FAILED:
             description = DSC_BIND_FAILED;
             break;
-        case ErrorId::NIO_ERROR:
-            description = DSC_NIO_ERROR;
-            break;
         case ErrorId::LISTEN_ERROR:
             description = DSC_LISTEN_ERROR;
             break;
@@ -74,6 +70,8 @@ const char* InetException::get_error_description() const noexcept
 const char* const OsException::DSC_UNKNOWN              = "No error description is available";
 const char* const OsException::DSC_INVALID_SELECT_FD    = "Invalid filedescriptor for select()";
 const char* const OsException::DSC_IO_ERROR             = "I/O error";
+const char* const OsException::DSC_NBLK_IO_ERROR        = "Non-blocking I/O initialization failed";
+const char* const OsException::DSC_IPC_ERROR            = "IPC setup failed";
 
 OsException::OsException() noexcept
 {
@@ -103,6 +101,12 @@ const char* OsException::get_error_description() const noexcept
             break;
         case ErrorId::IO_ERROR:
             description = DSC_IO_ERROR;
+            break;
+        case ErrorId::NBLK_IO_ERROR:
+            description = DSC_NBLK_IO_ERROR;
+            break;
+        case ErrorId::IPC_ERROR:
+            description = DSC_IPC_ERROR;
             break;
         case ErrorId::UNKNOWN:
             // fall-through
