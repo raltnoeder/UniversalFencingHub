@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "Shared.h"
+
 class MsgHeader
 {
   public:
@@ -21,6 +23,10 @@ class MsgHeader
     virtual MsgHeader& operator=(const MsgHeader& orig) = default;
     virtual MsgHeader& operator=(MsgHeader&& orig) = default;
     virtual void clear() noexcept;
+
+    virtual void set_msg_type(const msgtype value);
+    virtual void serialize(char* io_buffer) const;
+    virtual void deserialize(const char* io_buffer);
 
     static uint16_t bytes_to_field_value(const char* buffer, size_t offset) noexcept;
     static void field_value_to_bytes(uint16_t value, char* buffer, size_t offset) noexcept;

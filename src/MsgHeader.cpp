@@ -18,6 +18,23 @@ void MsgHeader::clear() noexcept
     data_length = 0;
 }
 
+void MsgHeader::set_msg_type(const msgtype value)
+{
+    msg_type = static_cast<uint16_t> (value);
+}
+
+void MsgHeader::serialize(char* const io_buffer) const
+{
+    field_value_to_bytes(msg_type, io_buffer, MSG_TYPE_OFFSET);
+    field_value_to_bytes(data_length, io_buffer, DATA_LENGTH_OFFSET);
+}
+
+void MsgHeader::deserialize(const char* const io_buffer)
+{
+    msg_type = bytes_to_field_value(io_buffer, MSG_TYPE_OFFSET);
+    data_length = bytes_to_field_value(io_buffer, DATA_LENGTH_OFFSET);
+}
+
 uint16_t MsgHeader::bytes_to_field_value(const char* const buffer, const size_t offset) noexcept
 {
     uint16_t value = static_cast<unsigned char> (buffer[offset]);
