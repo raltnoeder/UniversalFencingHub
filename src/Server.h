@@ -1,0 +1,26 @@
+#ifndef SERVER_H
+#define SERVER_H
+
+#include <cstddef>
+#include <CharBuffer.h>
+
+class Server
+{
+  public:
+    typedef bool (Server::*fence_action_method)(const CharBuffer& node_name);
+
+    Server();
+    virtual ~Server() noexcept;
+    Server(const Server& other) = delete;
+    Server(Server&& orig) = default;
+    virtual Server& operator=(const Server& other) = delete;
+    virtual Server& operator=(Server&& orig) = default;
+
+    virtual int run(int argc, const char* const argv[]) noexcept;
+    virtual bool action_power_off(const CharBuffer& node_name) noexcept;
+    virtual bool action_power_on(const CharBuffer& node_name) noexcept;
+    virtual bool action_reboot(const CharBuffer& node_name) noexcept;
+    virtual const char* get_version() noexcept;
+};
+
+#endif /* SERVER_H */
