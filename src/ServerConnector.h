@@ -40,22 +40,22 @@ class ServerConnector
 
         enum class Phase : uint8_t
         {
-            RECV_HEADER = 0,
-            RECV_DATA   = 1,
-            SEND        = 2,
-            PENDING     = 3,
-            EXECUTING   = 4,
-            CANCELED    = 5
+            RECV        = 0,
+            SEND        = 1,
+            PENDING     = 2,
+            EXECUTING   = 3,
+            CANCELED    = 4
         };
 
         struct sockaddr*    address         = nullptr;
         socklen_t           address_length  = 0;
         int                 socket_domain   = AF_INET6;
         int                 socket_fd       = SOCKET_FD_NONE;
-        Phase               current_phase   = Phase::RECV_HEADER;
+        Phase               current_phase   = Phase::RECV;
         IoOp                io_state        = IoOp::NOOP;
-        size_t              io_offset       = 0;
         MsgHeader           header;
+        bool                have_header     = false;
+        size_t              io_offset       = 0;
         char*               io_buffer       = nullptr;
 
         NetClient();
@@ -65,6 +65,7 @@ class ServerConnector
         virtual NetClient& operator=(const NetClient& orig) = delete;
         virtual NetClient& operator=(NetClient&& orig) = default;
         virtual void clear() noexcept;
+        virtual void clear_io_buffer() noexcept;
     };
 
     using ClientAlloc = GenAlloc<NetClient>;
@@ -99,6 +100,10 @@ class ServerConnector
     virtual ServerConnector& operator=(ServerConnector&& orig) = delete;
 
     virtual void run();
+    virtual void accept_connection();
+    virtual void close_connection(NetClient* const current_client);
+    virtual void receive_message(NetClient* const current_client);
+    virtual void send_message(NetClient* const current_client);
     virtual void test();
 
   private:

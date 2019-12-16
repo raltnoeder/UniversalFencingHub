@@ -15,6 +15,8 @@ extern "C"
     #include <fcntl.h>
     #include <errno.h>
     #include <sys/select.h>
+    #include <sys/types.h>
+    #include <sys/socket.h>
 }
 
 constexpr const size_t   ServerConnector::MAX_CONNECTIONS            = 24;
@@ -70,10 +72,16 @@ void ServerConnector::NetClient::clear() noexcept
 {
     zero_memory(reinterpret_cast<char*> (address), static_cast<size_t> (address_length));
     socket_fd       = SOCKET_FD_NONE;
-    current_phase   = Phase::RECV_HEADER;
+    current_phase   = Phase::RECV;
     io_state        = IoOp::NOOP;
-    io_offset       = 0;
     header.clear();
+    have_header     = false;
+    clear_io_buffer();
+}
+
+void ServerConnector::NetClient::clear_io_buffer() noexcept
+{
+    io_offset = 0;
     zero_memory(io_buffer, IO_BUFFER_SIZE);
 }
 
@@ -106,13 +114,18 @@ void ServerConnector::run()
         FD_ZERO(read_fd_set);
         FD_ZERO(write_fd_set);
 
-        // Add the server socket to the read-selectable set
-        FD_SET(socket_fd, read_fd_set);
-        int max_fd = socket_fd;
-
-        // Add active clients to the read/write sets
+        int max_fd = 0;
         {
             std::unique_lock<std::mutex> lock(client_queue_lock);
+
+            // Add the server socket to the read-selectable set
+            if (client_queue.get_size() < MAX_CONNECTIONS)
+            {
+                FD_SET(socket_fd, read_fd_set);
+                max_fd = socket_fd;
+            }
+
+            // Add active clients to the read/write sets
             for (NetClient* client = client_queue.get_first(); client != nullptr; client = client->get_next_node())
             {
                 if (client->io_state == NetClient::IoOp::READ)
@@ -142,7 +155,7 @@ void ServerConnector::run()
         }
         if (FD_ISSET(socket_fd, read_fd_set) != 0)
         {
-            // New client connection
+            accept_connection();
         }
         // TODO: Check active clients for operations
         {
@@ -155,6 +168,136 @@ void ServerConnector::run()
     }
 
     close_fd(socket_fd);
+}
+
+void ServerConnector::accept_connection()
+{
+    try
+    {
+        ClientAlloc::scope_ptr new_client = client_pool.allocate_scope();
+        NetClient* new_client_ptr = new_client.get();
+        new_client_ptr->clear();
+        new_client_ptr->socket_fd = accept(socket_fd, new_client_ptr->address, &(new_client_ptr->address_length));
+        new_client_ptr->socket_domain = socket_domain;
+        new_client_ptr->io_state = NetClient::IoOp::READ;
+        new_client_ptr->current_phase = NetClient::Phase::RECV;
+
+        {
+            std::unique_lock<std::mutex> lock(client_queue_lock);
+            client_queue.add_last(new_client_ptr);
+        }
+
+        new_client.release();
+    }
+    catch (std::bad_alloc&)
+    {
+        // No free NetClient objects
+        // TODO: Log implementation error, this section should not be reached,
+        //       since MAX_CONNECTIONS == client_pool size
+    }
+}
+
+void ServerConnector::close_connection(NetClient* const current_client)
+{
+    close_fd(current_client->socket_fd);
+    current_client->clear();
+
+    std::unique_lock<std::mutex> lock(client_queue_lock);
+    client_queue.remove(current_client);
+
+    client_pool.deallocate(current_client);
+}
+
+void ServerConnector::receive_message(NetClient* const current_client)
+{
+    const size_t req_read_size = current_client->io_offset < MsgHeader::HEADER_SIZE ?
+        MsgHeader::HEADER_SIZE - MsgHeader::HEADER_SIZE :
+        NetClient::IO_BUFFER_SIZE - current_client->io_offset;
+    const ssize_t read_size = recv(
+        current_client->socket_fd,
+        &(current_client->io_buffer[current_client->io_offset]),
+        req_read_size,
+        0 // Flags
+    );
+    if (read_size == -1)
+    {
+        // IO Error
+        close_connection(current_client);
+    }
+    else
+    if (read_size == 0)
+    {
+        // End of stream
+        close_connection(current_client);
+    }
+    else
+    {
+        current_client->io_offset += static_cast<size_t> (read_size);
+    }
+
+    if (current_client->have_header)
+    {
+        if (current_client->io_offset >= current_client->header.data_length)
+        {
+            std::unique_lock<std::mutex> lock(client_queue_lock);
+            current_client->io_state = NetClient::IoOp::NOOP;
+            current_client->current_phase = NetClient::Phase::PENDING;
+
+            // TODO: Notify the worker pool to pick up pending tasks
+        }
+    }
+    else
+    if (current_client->io_offset >= MsgHeader::HEADER_SIZE)
+    {
+        current_client->header.msg_type = MsgHeader::bytes_to_field_value(
+            current_client->io_buffer, MsgHeader::MSG_TYPE_OFFSET
+        );
+        current_client->header.data_length = std::min(
+            static_cast<uint16_t> (NetClient::IO_BUFFER_SIZE),
+            MsgHeader::bytes_to_field_value(
+                current_client->io_buffer, MsgHeader::DATA_LENGTH_OFFSET
+            )
+        );
+        current_client->have_header = true;
+    }
+}
+
+void ServerConnector::send_message(NetClient* const current_client)
+{
+    if (!current_client->have_header)
+    {
+        MsgHeader::field_value_to_bytes(
+            current_client->header.msg_type,
+            current_client->io_buffer,
+            MsgHeader::MSG_TYPE_OFFSET
+        );
+        MsgHeader::field_value_to_bytes(
+            current_client->header.data_length,
+            current_client->io_buffer,
+            MsgHeader::DATA_LENGTH_OFFSET
+        );
+        current_client->have_header = true;
+    }
+
+    const size_t req_write_size = std::min(
+        static_cast<uint16_t> (NetClient::IO_BUFFER_SIZE),
+        current_client->header.data_length
+    );
+    const ssize_t write_size = send(
+        current_client->socket_fd,
+        &(current_client->io_buffer[current_client->io_offset]),
+        req_write_size,
+        0 // Flags
+    );
+    if (write_size > 0)
+    {
+        current_client->io_offset += static_cast<size_t> (write_size);
+    }
+    else
+    if (write_size == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
+    {
+        close_connection(current_client);
+    }
 }
 
 void ServerConnector::test()
