@@ -20,9 +20,9 @@ void MsgHeader::clear() noexcept
 
 uint16_t MsgHeader::bytes_to_field_value(const char* const buffer, const size_t offset) noexcept
 {
-    uint16_t value = static_cast<uint16_t> (buffer[offset]);
+    uint16_t value = static_cast<unsigned char> (buffer[offset]);
     value <<= 8;
-    value |= static_cast<uint16_t> (buffer[offset + 1]);
+    value |= static_cast<unsigned char> (buffer[offset + 1]);
     return value;
 }
 
