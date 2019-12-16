@@ -65,7 +65,7 @@ Client::ExitCode Client::run()
 // @throws std::bad_alloc, OsException, ClientException
 void Client::read_parameters(FenceParameters& params)
 {
-    std::unique_ptr<char> line_buffer_mgr(new char[LINE_BUFFER_SIZE]);
+    std::unique_ptr<char[]> line_buffer_mgr(new char[LINE_BUFFER_SIZE]);
     char* const line_buffer = line_buffer_mgr.get();
 
     try
