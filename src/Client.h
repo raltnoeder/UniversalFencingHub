@@ -77,6 +77,7 @@ class Client
         std::string nodename;
         bool have_nodename = false;
 
+        bool have_connection_parameters() const;
         bool have_all_parameters() const;
     };
 
@@ -102,6 +103,9 @@ class Client
 
     // @throws std::bad_alloc, OsException, InetException, ClientException, ProtocolException
     bool fence_action(const FenceParameters& params);
+
+    // @throws std::bad_alloc, ClientException
+    void check_have_connection_parameters(const FenceParameters& params);
 
     // @throws std::bad_alloc, ClientException
     void check_have_all_parameters(const FenceParameters& params);

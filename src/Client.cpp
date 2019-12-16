@@ -171,19 +171,19 @@ Client::ExitCode Client::dispatch_request(const FenceParameters& params)
     else
     if (params.action == ACTION_LIST)
     {
-        check_have_all_parameters(params);
+        check_have_connection_parameters(params);
         rc = check_server_connection(params) ? ExitCode::FENCING_SUCCESS : ExitCode::FENCING_FAILURE;
     }
     else
     if (params.action == ACTION_MONITOR)
     {
-        check_have_all_parameters(params);
+        check_have_connection_parameters(params);
         rc = check_server_connection(params) ? ExitCode::FENCING_SUCCESS : ExitCode::FENCING_FAILURE;
     }
     else
     if (params.action == ACTION_STATUS)
     {
-        check_have_all_parameters(params);
+        check_have_connection_parameters(params);
         rc = check_server_connection(params) ? ExitCode::FENCING_SUCCESS : ExitCode::FENCING_FAILURE;
     }
     else
@@ -334,6 +334,36 @@ bool Client::fence_action(const FenceParameters& params)
 }
 
 // @throws std::bad_alloc, ClientException
+void Client::check_have_connection_parameters(const FenceParameters& params)
+{
+    if (!params.have_connection_parameters())
+    {
+        std::string error_msg("The following required paramters were not specified by the request:\n");
+        if (!params.have_action)
+        {
+            error_msg += "    " + KEY_ACTION + "\n";
+        }
+        if (!params.have_protocol)
+        {
+            error_msg += "    " + KEY_PROTOCOL + "\n";
+        }
+        if (!params.have_ip_address)
+        {
+            error_msg += "    " + KEY_IPADDR + "\n";
+        }
+        if (!params.have_secret)
+        {
+            error_msg += "    " + KEY_SECRET + "\n";
+        }
+        if (!params.have_tcp_port)
+        {
+            error_msg += "    " + KEY_PORT + "\n";
+        }
+        throw ClientException(error_msg);
+    }
+}
+
+// @throws std::bad_alloc, ClientException
 void Client::check_have_all_parameters(const FenceParameters& params)
 {
     if (!params.have_all_parameters())
@@ -369,7 +399,12 @@ void Client::check_have_all_parameters(const FenceParameters& params)
 
 bool Client::FenceParameters::have_all_parameters() const
 {
-    return have_action && have_protocol && have_ip_address && have_nodename && have_secret && have_tcp_port;
+    return have_action && have_protocol && have_ip_address && have_tcp_port && have_nodename && have_secret;
+}
+
+bool Client::FenceParameters::have_connection_parameters() const
+{
+    return have_action && have_protocol && have_ip_address && have_tcp_port && have_secret;
 }
 
 int main(int argc, char* argv[])
