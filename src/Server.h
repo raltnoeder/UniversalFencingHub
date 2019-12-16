@@ -28,7 +28,7 @@ class Server
 
     virtual int run(int argc, const char* const argv[]) noexcept;
     virtual bool fence_action_off(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept;
-    virtual bool fence_action_power_on(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept;
+    virtual bool fence_action_on(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept;
     virtual bool fence_action_reboot(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept;
     virtual const char* get_version() noexcept;
     virtual uint32_t get_version_code() noexcept;

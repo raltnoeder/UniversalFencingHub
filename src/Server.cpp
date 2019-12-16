@@ -112,7 +112,7 @@ bool Server::fence_action_off(const CharBuffer& nodename, const CharBuffer& clie
     return success_flag;
 }
 
-bool Server::fence_action_power_on(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept
+bool Server::fence_action_on(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept
 {
     report_fence_action(LABEL_ON, nodename);
     bool success_flag = plugin_functions.ufh_fence_on(plugin_context, nodename.c_str(), nodename.length());

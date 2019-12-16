@@ -534,10 +534,10 @@ void ServerConnector::process_client_message(NetClient* const client)
             fence_action(&Server::fence_action_off, client);
             break;
         case protocol::MsgType::FENCE_ON:
-            fence_action(&Server::fence_action_off, client);
+            fence_action(&Server::fence_action_on, client);
             break;
         case protocol::MsgType::FENCE_REBOOT:
-            fence_action(&Server::fence_action_off, client);
+            fence_action(&Server::fence_action_reboot, client);
             break;
         case protocol::MsgType::FENCE_SUCCESS:
             // fall-through
