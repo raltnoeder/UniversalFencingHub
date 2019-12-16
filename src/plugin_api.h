@@ -3,10 +3,12 @@
 
 #include <stdbool.h>
 
-bool power_off(const char *nodename, size_t nodename_length);
+bool ufh_plugin_init(void);
 
-bool power_on(const char *nodename, size_t nodename_length);
+bool ufh_power_off(const char *nodename, size_t nodename_length);
 
-bool reboot(const char *nodename, size_t nodename_length);
+bool ufh_power_on(const char *nodename, size_t nodename_length);
+
+bool ufh_reboot(const char *nodename, size_t nodename_length);
 
 #endif /* PLUGIN_API_H */

@@ -30,30 +30,45 @@ int Server::run(const int argc, const char* const argv[]) noexcept
         std::cout << "Start application" << std::endl;
 
         std::cout << "Initializing parameter buffers" << std::endl;
-        CharBuffer protocol("IPV6");
-        CharBuffer ip_string("::1");
-        CharBuffer port_string("2111");
+        const CharBuffer protocol("IPV6");
+        const CharBuffer ip_string("::1");
+        const CharBuffer port_string("2111");
+        const CharBuffer plugin_path("./debug_plugin.so");
 
-        std::cout << "Initializing ServerConnector" << std::endl;
-        ServerConnector connector(this, protocol, ip_string, port_string);
-        std::cout << "Initializing WorkerPool" << std::endl;
-        WorkerPool thread_pool(
-            &(connector.action_queue_lock),
-            ServerConnector::MAX_CONNECTIONS,
-            connector.get_worker_thread_invocation()
-        );
-        std::cout << "Starting WorkerPool" << std::endl;
-        thread_pool.start();
+        std::cout << "Loading fencing plugin, path = " << plugin_path.c_str() << std::endl;
+        load_plugin(plugin_path.c_str());
 
-        std::cout << "Starting ServerConnector" << std::endl;
-        connector.run(thread_pool);
+        std::cout << "Initializing fencing plugin" << std::endl;
+        if (plugin_functions.ufh_plugin_init())
+        {
+            std::cout << "Initializing ServerConnector" << std::endl;
+            ServerConnector connector(this, protocol, ip_string, port_string);
+            std::cout << "Initializing WorkerPool" << std::endl;
+            WorkerPool thread_pool(
+                &(connector.action_queue_lock),
+                ServerConnector::MAX_CONNECTIONS,
+                connector.get_worker_thread_invocation()
+            );
+            std::cout << "Starting WorkerPool" << std::endl;
+            thread_pool.start();
 
-        std::cout << "End application" << std::endl;
-        rc = EXIT_SUCCESS;
+            std::cout << "Starting ServerConnector" << std::endl;
+            connector.run(thread_pool);
+
+            rc = EXIT_SUCCESS;
+        }
+        else
+        {
+            std::cout << "Error: Plugin initialization failed" << std::endl;
+        }
     }
     catch (std::bad_alloc&)
     {
         std::cerr << "Initialization failed: Out of memory" << std::endl;
+    }
+    catch (OsException& os_exc)
+    {
+        std::cerr << "System error: " << os_exc.get_error_description() << std::endl;
     }
     catch (InetException& inet_exc)
     {
@@ -63,6 +78,7 @@ int Server::run(const int argc, const char* const argv[]) noexcept
     {
         std::cerr << "Server::run() caught an unhandled exception, terminating" << std::endl;
     }
+    std::cout << "End application" << std::endl;
     return rc;
 }
 
@@ -70,24 +86,32 @@ bool Server::fence_action_power_off(const CharBuffer& node_name, const CharBuffe
 {
     std::cout << "Server: action_power_off(...) with node_name = " << node_name.c_str() << std::endl;
     std::cout << "Server: secret = " << client_secret.c_str() << std::endl;
-    return false;
+    return plugin_functions.ufh_power_off(node_name.c_str(), node_name.length());
 }
 
 bool Server::fence_action_power_on(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept
 {
     std::cout << "Server: action_power_on(...) with node_name = " << node_name.c_str() << std::endl;
-    return false;
+    std::cout << "Server: secret = " << client_secret.c_str() << std::endl;
+    return plugin_functions.ufh_power_on(node_name.c_str(), node_name.length());
 }
 
 bool Server::fence_action_reboot(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept
 {
     std::cout << "Server: action_reboot(...) with node_name = " << node_name.c_str() << std::endl;
-    return false;
+    std::cout << "Server: secret = " << client_secret.c_str() << std::endl;
+    return plugin_functions.ufh_reboot(node_name.c_str(), node_name.length());
 }
 
 const char* Server::get_version() noexcept
 {
     return ""; // TODO: Return version
+}
+
+// @throws OsException
+void Server::load_plugin(const char* const path)
+{
+    plugin::load_plugin(path, plugin_functions);
 }
 
 int main(int argc, char* argv[])

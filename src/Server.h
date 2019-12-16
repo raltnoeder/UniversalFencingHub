@@ -4,12 +4,12 @@
 #include <cstddef>
 #include <CharBuffer.h>
 
+#include "plugin_loader.h"
+
 class Server
 {
   public:
     typedef bool (Server::*fence_action_method)(const CharBuffer& node_name, const CharBuffer& client_secret);
-
-    typedef bool (*plugin_call)(const char* nodename, size_t nodename_length);
 
     Server();
     virtual ~Server() noexcept;
@@ -23,6 +23,12 @@ class Server
     virtual bool fence_action_power_on(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept;
     virtual bool fence_action_reboot(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept;
     virtual const char* get_version() noexcept;
+
+  private:
+    plugin::function_table plugin_functions;
+
+    // @throws OsException
+    void load_plugin(const char* const path);
 };
 
 #endif /* SERVER_H */
