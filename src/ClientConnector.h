@@ -39,6 +39,12 @@ class ClientConnector
     // @throws InetException, OsException
     virtual bool check_connection();
 
+    // @throws InetException, OsException
+    virtual void send_message();
+
+    // @throws InetExeption, OsException
+    virtual void receive_message();
+
   private:
     std::unique_ptr<char[]> address_mgr;
     std::unique_ptr<char[]> io_buffer_mgr;

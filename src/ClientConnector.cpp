@@ -111,8 +111,6 @@ void ClientConnector::clear_io_buffer() noexcept
 
 bool ClientConnector::check_connection()
 {
-    bool rc = false;
-
     header.msg_type = static_cast<uint16_t> (msgtype::ECHO_REQUEST);
     header.data_length = 0;
     header.field_value_to_bytes(header.msg_type, io_buffer, MsgHeader::MSG_TYPE_OFFSET);
@@ -122,4 +120,76 @@ bool ClientConnector::check_connection()
     // TODO: receive reply
 
     return rc;
+}
+
+// @throws InetException, OsException
+void ClientConnector::send_message()
+{
+    size_t io_offset = 0;
+    const size_t send_length = std::min(
+        std::max(MsgHeader::HEADER_SIZE, static_cast<size_t> (header.data_length)),
+        IO_BUFFER_SIZE
+    );
+    while (io_offset < send_length)
+    {
+        const size_t req_write_size = send_length - io_offset;
+        const ssize_t write_size = send(
+            socket_fd,
+            &(io_buffer[io_offset]),
+            req_write_size,
+            0 // Flags
+        );
+        if (write_size > 0)
+        {
+            io_offset += static_cast<size_t> (write_size);
+        }
+        else
+        if (write_size == -1)
+        {
+            disconnect_from_server();
+        }
+    }
+    if (io_offset < header.data_length)
+    {
+        throw OsException(OsException::ErrorId::IO_ERROR);
+    }
+}
+
+// @throws InetExeption, OsException
+void ClientConnector::receive_message()
+{
+    bool have_header = false;
+    size_t io_offset = 0;
+    size_t receive_length = MsgHeader::HEADER_SIZE;
+    while (io_offset < receive_length)
+    {
+        const size_t req_read_size = receive_length - io_offset;
+        const ssize_t read_size = recv(
+            socket_fd,
+            &(io_buffer[io_offset]),
+            req_read_size,
+            0 // Flags
+        );
+        if (read_size > 0)
+        {
+            io_offset += read_size;
+
+            if (!have_header && io_offset >= MsgHeader::HEADER_SIZE)
+            {
+                header.deserialize(io_buffer);
+                have_header = true;
+
+                receive_length = std::min(static_cast<size_t> (header.data_length), IO_BUFFER_SIZE);
+            }
+        }
+        else
+        if (read_size == -1)
+        {
+            disconnect_from_server();
+        }
+    }
+    if (!have_header || io_offset < header.data_length)
+    {
+        throw OsException(OsException::ErrorId::IO_ERROR);
+    }
 }
