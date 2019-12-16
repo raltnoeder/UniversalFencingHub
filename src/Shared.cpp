@@ -58,7 +58,7 @@ namespace protocol
                 const size_t remain_length = io_buffer_data_length - offset - 2;
                 if (field_length <= remain_length)
                 {
-                    field_buffer.copy_raw(io_buffer, offset + 2, offset + 2 + field_length);
+                    field_buffer.substring_raw_from(io_buffer, offset + 2, offset + 2 + field_length);
                     offset += field_length + 2;
                     have_field = true;
                 }
@@ -90,7 +90,7 @@ namespace protocol
             const size_t split_idx = key.index_of(KEY_VALUE_SPLIT_SEQ);
             if (split_idx != CharBuffer::NPOS)
             {
-                value.substring(key, split_idx + KEY_VALUE_SPLIT_SEQ.length(), key.length());
+                value.substring_from(key, split_idx + KEY_VALUE_SPLIT_SEQ.length(), key.length());
                 key.substring(0, split_idx);
             }
             else
