@@ -3,6 +3,7 @@
 #include "client_exceptions.h"
 #include "Shared.h"
 #include "exceptions.h"
+#include "ClientMetaData.h"
 
 #include <new>
 #include <stdexcept>
@@ -15,8 +16,8 @@ const char* const Client::DEFAULT_APP_NAME = "fence-universal";
 
 const std::string Client::KEY_ACTION("action");
 const std::string Client::KEY_PROTOCOL("protocol");
-const std::string Client::KEY_IPADDR("ipaddr");
-const std::string Client::KEY_PORT("port");
+const std::string Client::KEY_IPADDR("ip_address");
+const std::string Client::KEY_PORT("tcp_port");
 const std::string Client::KEY_SECRET("secret");
 const std::string Client::KEY_NODENAME("nodename");
 
@@ -164,12 +165,14 @@ Client::ExitCode Client::dispatch_request(const FenceParameters& params)
     else
     if (params.action == ACTION_METADATA)
     {
-        // TODO: Output fencing agent meta data
+        output_metadata();
+        rc = ExitCode::FENCING_SUCCESS;
     }
     else
     if (params.action == ACTION_LIST)
     {
-        // TODO: Not implemented, exit with the appropriate exit code
+        check_have_all_parameters(params);
+        rc = check_server_connection(params) ? ExitCode::FENCING_SUCCESS : ExitCode::FENCING_FAILURE;
     }
     else
     if (params.action == ACTION_MONITOR)
@@ -180,12 +183,13 @@ Client::ExitCode Client::dispatch_request(const FenceParameters& params)
     else
     if (params.action == ACTION_STATUS)
     {
-        // TODO: Is this implemented? Check API standard on what this is supposed to do
+        check_have_all_parameters(params);
+        rc = check_server_connection(params) ? ExitCode::FENCING_SUCCESS : ExitCode::FENCING_FAILURE;
     }
     else
     if (params.action == ACTION_START || params.action == ACTION_STOP)
     {
-        // TODO: Those are effectively no-ops for this agent, exit with the appropriate exit code
+        rc = ExitCode::FENCING_SUCCESS;
     }
     else
     {
@@ -403,4 +407,9 @@ int main(int argc, char* argv[])
         std::cerr << pgm_call_path << ": Execution failed: Out of memory" << std::endl;
     }
     return rc;
+}
+
+void Client::output_metadata()
+{
+    std::cout << metadata::CRM_META_DATA_XML << std::endl;
 }

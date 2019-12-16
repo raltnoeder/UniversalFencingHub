@@ -105,6 +105,8 @@ class Client
 
     // @throws std::bad_alloc, ClientException
     void check_have_all_parameters(const FenceParameters& params);
+
+    void output_metadata();
 };
 
 #endif /* CLIENT_H */
