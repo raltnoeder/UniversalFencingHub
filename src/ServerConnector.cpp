@@ -643,7 +643,7 @@ ServerConnector::NetClient::NetClient():
     io_buffer = io_buffer_mgr.get();
 }
 
-ServerConnector::NetClient::~NetClient()
+ServerConnector::NetClient::~NetClient() noexcept
 {
 }
 
