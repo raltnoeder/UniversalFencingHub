@@ -44,7 +44,7 @@ int Server::run(const int argc, const char* const argv[]) noexcept
         const CharBuffer protocol("IPV6");
         const CharBuffer ip_string("::1");
         const CharBuffer port_string("2111");
-        const CharBuffer plugin_path("./debug_plugin.so");
+        const CharBuffer plugin_path("./exec_script_plugin.so");
 
         PluginMgr plugin(plugin_path.c_str(), this);
 
@@ -140,7 +140,7 @@ void Server::report_fence_action_result(const char* const action, const CharBuff
 {
     std::unique_lock<std::mutex> scope_lock(stdio_lock);
     std::cout << ufh::LOGPFX_FENCE << "Fencing action \"" << action <<
-        "\" affecting node \"" << nodename.c_str() << (success_flag ? "\" SUCCEEDED" : " FAILED") << std::endl;
+        "\" affecting node \"" << nodename.c_str() << "\" " << (success_flag ? "SUCCEEDED" : "FAILED") << std::endl;
 }
 
 
