@@ -34,6 +34,11 @@ class ClientConnector
     socklen_t           address_length  = 0;
     int                 socket_domain   = AF_INET6;
     int                 socket_fd       = sys::FD_NONE;
+
+    // @throws InetException, OsException
+    void connect();
+
+    void disconnect() noexcept;
 };
 
 #endif /* CLIENTCONNECTOR_H */

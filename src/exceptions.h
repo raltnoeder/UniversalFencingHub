@@ -23,7 +23,13 @@ class InetException : public std::exception
         // Binding a socket failed
         BIND_FAILED         = 6,
         // Setting up server socket with listen(...) failed
-        LISTEN_ERROR        = 7
+        LISTEN_ERROR        = 7,
+        // Network unreachable
+        NETWORK_UNREACHABLE = 8,
+        // Connection refused by the peer
+        CONNECTION_REFUSED  = 9,
+        // connect() failed
+        CONNECT_FAILED      = 10
     };
 
     static const char* const DSC_UNKNOWN;
@@ -34,6 +40,9 @@ class InetException : public std::exception
     static const char* const DSC_SOCKET_ERROR;
     static const char* const DSC_BIND_FAILED;
     static const char* const DSC_LISTEN_ERROR;
+    static const char* const DSC_NETWORK_UNREACHABLE;
+    static const char* const DSC_CONNECTION_REFUSED;
+    static const char* const DSC_CONNECT_FAILED;
 
   private:
     ErrorId exc_error = ErrorId::UNKNOWN;

@@ -17,6 +17,12 @@ namespace sys
     void close_fd(int& fd) noexcept;
 }
 
+namespace inet
+{
+    extern const char* const IPV6_LOCAL_BIND_ADDRESS;
+    extern const char* const IPV4_LOCAL_BIND_ADDRESS;
+}
+
 namespace keyword
 {
     extern const char* const PROTO_IPV4;

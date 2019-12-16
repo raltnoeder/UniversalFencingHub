@@ -26,6 +26,12 @@ namespace sys
     }
 }
 
+namespace inet
+{
+    extern const char* const IPV6_LOCAL_BIND_ADDRESS = "::";
+    extern const char* const IPV4_LOCAL_BIND_ADDRESS = "0.0.0.0";
+}
+
 namespace keyword
 {
     const char* const PROTO_IPV4 = "IPV4";

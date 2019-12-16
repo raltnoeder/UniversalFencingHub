@@ -9,6 +9,10 @@ const char* const InetException::DSC_INVALID_PORT_NUMBER    = "IP port number no
 const char* const InetException::DSC_SOCKET_ERROR           = "Network socket error";
 const char* const InetException::DSC_BIND_FAILED            = "Binding a socket failed";
 const char* const InetException::DSC_LISTEN_ERROR           = "Server socket listen(...) failed";
+const char* const InetException::DSC_NETWORK_UNREACHABLE    = "The destination network is unreachable";
+const char* const InetException::DSC_CONNECTION_REFUSED     = "The connection was refused by the peer";
+const char* const InetException::DSC_CONNECT_FAILED =
+    "The connection attempt failed (connect() system call failed)";
 
 InetException::InetException() noexcept
 {
@@ -58,6 +62,15 @@ const char* InetException::get_error_description() const noexcept
             break;
         case ErrorId::LISTEN_ERROR:
             description = DSC_LISTEN_ERROR;
+            break;
+        case ErrorId::NETWORK_UNREACHABLE:
+            description = DSC_NETWORK_UNREACHABLE;
+            break;
+        case ErrorId::CONNECTION_REFUSED:
+            description = DSC_CONNECTION_REFUSED;
+            break;
+        case ErrorId::CONNECT_FAILED:
+            description = DSC_CONNECT_FAILED;
             break;
         case ErrorId::UNKNOWN:
             // fall-through
