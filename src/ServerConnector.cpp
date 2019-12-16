@@ -20,8 +20,8 @@ extern "C"
     #include <sys/socket.h>
 }
 
-const size_t   ServerConnector::MAX_CONNECTIONS             = 24;
-const size_t   ServerConnector::MAX_CONNECTION_BACKLOG      = 24;
+const size_t ServerConnector::MAX_CONNECTIONS               = 24;
+const size_t ServerConnector::MAX_CONNECTION_BACKLOG        = 24;
 
 const size_t ServerConnector::NetClient::IO_BUFFER_SIZE     = 1024;
 const size_t ServerConnector::NetClient::FIELD_SIZE         = 1024;
@@ -42,37 +42,15 @@ ServerConnector::ServerConnector(
     selector_trigger[sys::PIPE_READ_END] = sys::FD_NONE;
     selector_trigger[sys::PIPE_WRITE_END] = sys::FD_NONE;
 
-    if (protocol_string == keyword::PROTO_IPV6)
-    {
-        socket_domain = AF_INET6;
-        address_length = sizeof (struct sockaddr_in6);
-    }
-    else
-    if (protocol_string == keyword::PROTO_IPV4)
-    {
-        socket_domain = AF_INET;
-        address_length = sizeof (struct sockaddr_in);
-    }
-    else
-    {
-        throw InetException(InetException::ErrorId::UNKNOWN_AF);
-    }
-    address_mgr = std::unique_ptr<char[]>(new char[address_length]);
-    address = reinterpret_cast<struct sockaddr*> (address_mgr.get());
+    init_socket_address(protocol_string, ip_string, port_string, socket_domain, address_mgr, address, address_length);
 
     if (socket_domain == AF_INET6)
     {
-        struct sockaddr_in6* inet_address = reinterpret_cast<struct sockaddr_in6*> (address);
-        parse_ipv6(ip_string, port_string, *inet_address);
-
         clients_init_ipv6();
     }
     else
     if (socket_domain == AF_INET)
     {
-        struct sockaddr_in* inet_address = reinterpret_cast<struct sockaddr_in*> (address);
-        parse_ipv4(ip_string, port_string, *inet_address);
-
         clients_init_ipv4();
     }
 
