@@ -1,7 +1,11 @@
 #include "WorkerPool.h"
 
+#include <iostream>
+#include "Shared.h"
+
 WorkerPool::WorkerPool(std::mutex* const lock, const size_t worker_count, WorkerPoolExecutor* const executor)
 {
+    std::cout << ufh::LOGPFX_START << "Initializing thread pool" << std::endl;
     pool_lock = lock;
     pool_size = worker_count;
     pool_threads_mgr = std::unique_ptr<std::thread[]>(new std::thread[pool_size]);
@@ -12,6 +16,7 @@ WorkerPool::WorkerPool(std::mutex* const lock, const size_t worker_count, Worker
 WorkerPool::~WorkerPool() noexcept
 {
     stop_threads();
+    std::cout << ufh::LOGPFX_STOP << "Uninitializing worker pool" << std::endl;
 }
 
 WorkerPool::WorkerPool(WorkerPool&& orig)
@@ -35,6 +40,7 @@ WorkerPool::WorkerPoolExecutor::~WorkerPoolExecutor() noexcept
 // @throws std::system_error
 void WorkerPool::start()
 {
+    std::cout << ufh::LOGPFX_START << "Starting worker threads" << std::endl;
     std::unique_lock<std::mutex> lock(*pool_lock);
     try
     {
@@ -83,6 +89,7 @@ void WorkerPool::worker_loop() noexcept
 
 void WorkerPool::stop_threads() noexcept
 {
+    std::cout << ufh::LOGPFX_STOP << "Stopping worker threads" << std::endl;
     {
         std::unique_lock<std::mutex> lock(*pool_lock);
         stop_workers = true;

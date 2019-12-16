@@ -14,6 +14,7 @@
 #include "ServerConnector.h"
 #include "WorkerPool.h"
 #include "exceptions.h"
+#include "server_exceptions.h"
 #include "version.h"
 #include "SignalHandler.h"
 
@@ -45,55 +46,27 @@ int Server::run(const int argc, const char* const argv[]) noexcept
         const CharBuffer port_string("2111");
         const CharBuffer plugin_path("./debug_plugin.so");
 
-        std::cout << ufh::LOGPFX_START << "Loading fencing plugin: Plugin path = " << plugin_path.c_str() << std::endl;
-        load_plugin(plugin_path.c_str());
+        PluginMgr plugin(plugin_path.c_str(), this);
 
-        std::cout << ufh::LOGPFX_START << "Executing fencing plugin initialization" << std::endl;
-        plugin::init_rc plugin_rc = plugin_functions.ufh_plugin_init();
-        if (plugin_rc.init_successful)
-        {
-            plugin_context = plugin_rc.context;
-            std::cout << ufh::LOGPFX_START << "Initializing network connector" << std::endl;
-            std::unique_ptr<ServerConnector> connector(
-                new ServerConnector(*this, *stop_signal, protocol, ip_string, port_string)
-            );
+        std::unique_ptr<ServerConnector> connector(
+            new ServerConnector(*this, *stop_signal, protocol, ip_string, port_string)
+        );
 
-            std::cout << ufh::LOGPFX_START << "Initializing thread pool" << std::endl;
-            std::unique_ptr<WorkerPool> thread_pool(
-                new WorkerPool(
-                    &(connector->action_queue_lock),
-                    ServerConnector::MAX_CONNECTIONS,
-                    connector->get_worker_thread_invocation()
-                )
-            );
+        std::unique_ptr<WorkerPool> thread_pool(
+            new WorkerPool(
+                &(connector->action_queue_lock),
+                ServerConnector::MAX_CONNECTIONS,
+                connector->get_worker_thread_invocation()
+            )
+        );
 
-            std::cout << ufh::LOGPFX_START << "Starting worker threads" << std::endl;
-            thread_pool->start();
+        thread_pool->start();
 
-            std::cout << ufh::LOGPFX_START << "Starting network connector" << std::endl;
-            connector->run(*thread_pool);
-            // Newline after possible "^C" output caused by Ctrl-C being entered on the console, purely cosmetic
-            std::cout << std::endl;
+        connector->run(*thread_pool);
+        // Newline after possible "^C" output caused by Ctrl-C being entered on the console, purely cosmetic
+        std::cout << std::endl;
 
-            std::cout << ufh::LOGPFX_STOP << "Stopping worker threads" << std::endl;
-            thread_pool->stop();
-
-            std::cout << ufh::LOGPFX_STOP << "Uninitializing worker pool" << std::endl;
-            thread_pool = nullptr;
-
-            std::cout << ufh::LOGPFX_STOP << "Uninitializing network connector" << std::endl;
-            connector = nullptr;
-
-            std::cout << ufh::LOGPFX_STOP << "Uninitializing fencing plugin" << std::endl;
-            plugin_functions.ufh_plugin_destroy(plugin_context);
-            plugin_context = nullptr;
-
-            rc = EXIT_SUCCESS;
-        }
-        else
-        {
-            std::cout << ufh::LOGPFX_ERROR << "Fencing plugin initialization failed" << std::endl;
-        }
+        rc = EXIT_SUCCESS;
     }
     catch (std::bad_alloc&)
     {
@@ -170,8 +143,45 @@ void Server::report_fence_action_result(const char* const action, const CharBuff
         "\" affecting node \"" << nodename.c_str() << (success_flag ? "\" SUCCEEDED" : " FAILED") << std::endl;
 }
 
-// @throws OsException
-void Server::load_plugin(const char* const path)
+
+// @throws OsException, PluginException
+Server::PluginMgr::PluginMgr(const char* path, Server* srv_ref)
 {
-    plugin::load_plugin(path, plugin_functions);
+    std::cout << ufh::LOGPFX_START << "Loading fencing plugin" << std::endl;
+    std::cout << ufh::LOGPFX_CONT << "Plugin path = " << path << std::endl;
+    srv = srv_ref;
+    plugin_handle = nullptr;
+    have_plugin_init = false;
+
+    plugin_handle = plugin::load_plugin(path, srv->plugin_functions);
+
+    plugin::init_rc rc = srv->plugin_functions.ufh_plugin_init();
+    if (rc.init_successful)
+    {
+        have_plugin_init = true;
+        srv->plugin_context = rc.context;
+    }
+    else
+    {
+        std::cerr << ufh::LOGPFX_ERROR << "Plugin initialization failed" << std::endl;
+        throw PluginException();
+    }
+}
+
+Server::PluginMgr::~PluginMgr() noexcept
+{
+    if (have_plugin_init)
+    {
+        std::cout << ufh::LOGPFX_STOP << "Uninitializing fencing plugin" << std::endl;
+        srv->plugin_functions.ufh_plugin_destroy(srv->plugin_context);
+        srv->plugin_context = nullptr;
+        have_plugin_init = false;
+    }
+    std::cout << ufh::LOGPFX_STOP << "Unloading fencing plugin" << std::endl;
+
+    if (plugin_handle != nullptr)
+    {
+        plugin::unload_plugin(plugin_handle, srv->plugin_functions);
+    }
+    plugin_handle = nullptr;
 }

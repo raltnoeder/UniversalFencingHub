@@ -30,7 +30,9 @@ namespace plugin
     };
 
     // @throws OsException
-    void load_plugin(const char* const path, function_table& functions);
+    void* load_plugin(const char* const path, function_table& functions);
+
+    void unload_plugin(void* plugin_handle, function_table& functions) noexcept;
 }
 
 #endif /* PLUGIN_LOADER_H */

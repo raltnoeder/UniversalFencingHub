@@ -34,13 +34,27 @@ class Server
     virtual uint32_t get_version_code() noexcept;
 
   private:
+    class PluginMgr
+    {
+      private:
+        Server* srv;
+        void* plugin_handle;
+        bool have_plugin_init;
+
+      public:
+        // @throws OsException, ClientException
+        PluginMgr(const char* path, Server* srv_ref);
+        virtual ~PluginMgr() noexcept;
+        PluginMgr(const PluginMgr& other) = delete;
+        PluginMgr(PluginMgr&& orig) = delete;
+        virtual PluginMgr& operator=(const PluginMgr& other) = default;
+        virtual PluginMgr& operator=(PluginMgr&& orig) = default;
+    };
+
     SignalHandler* stop_signal;
 
     plugin::function_table plugin_functions;
     void* plugin_context;
-
-    // @throws OsException
-    void load_plugin(const char* const path);
 
     void report_fence_action(const char* action, const CharBuffer& nodename);
     void report_fence_action_result(const char* action, const CharBuffer& nodename, bool success_flag);

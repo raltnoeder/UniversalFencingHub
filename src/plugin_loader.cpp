@@ -16,7 +16,7 @@ namespace plugin
     const char* const SYMBOL_FENCE_REBOOT   = "ufh_fence_reboot";
 
     // @throws OsException
-    void load_plugin(const char* const path, function_table& functions)
+    void* load_plugin(const char* const path, function_table& functions)
     {
         void* const plugin_handle = dlopen(path, RTLD_NOW);
         if (plugin_handle == nullptr)
@@ -42,5 +42,18 @@ namespace plugin
         {
             throw OsException(OsException::ErrorId::DYN_LOAD_ERROR);
         }
+
+        return plugin_handle;
+    }
+
+    void unload_plugin(void* plugin_handle, function_table& functions) noexcept
+    {
+        dlclose(plugin_handle);
+
+        functions.ufh_plugin_init = nullptr;
+        functions.ufh_plugin_destroy = nullptr;
+        functions.ufh_fence_off = nullptr;
+        functions.ufh_fence_on = nullptr;
+        functions.ufh_fence_reboot = nullptr;
     }
 }

@@ -36,6 +36,8 @@ ServerConnector::ServerConnector(
     const CharBuffer& port_string
 )
 {
+    std::cout << ufh::LOGPFX_START << "Initializing network connector" << std::endl;
+
     ufh_server = &server_ref;
     stop_signal = &stop_signal_ref;
 
@@ -64,6 +66,7 @@ ServerConnector::ServerConnector(
 
 ServerConnector::~ServerConnector() noexcept
 {
+    std::cout << ufh::LOGPFX_STOP << "Uninitializing network connector" << std::endl;
     sys::close_fd(socket_fd);
 }
 
@@ -72,6 +75,7 @@ void ServerConnector::run(WorkerPool& thread_pool)
 {
     try
     {
+        std::cout << ufh::LOGPFX_START << "Starting network connector" << std::endl;
         init();
         std::cout << ufh::LOGPFX_START << "Network connector initialization complete" << std::endl;
         std::cout << ufh::LOGPFX_MONITOR << "Ready to process requests" << std::endl;
