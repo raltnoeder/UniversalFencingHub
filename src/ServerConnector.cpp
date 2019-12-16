@@ -506,33 +506,33 @@ void ServerConnector::process_action_queue() noexcept
 // @throws ProtocolException
 void ServerConnector::process_client_message(NetClient* const client)
 {
-    switch (static_cast<msgtype> (client->header.msg_type))
+    switch (static_cast<MessageType> (client->header.msg_type))
     {
-        case msgtype::ECHO_REQUEST:
+        case MessageType::ECHO_REQUEST:
             client->clear_io_buffer();
-            client->header.msg_type = static_cast<uint16_t> (msgtype::ECHO_REPLY);
+            client->header.msg_type = static_cast<uint16_t> (MessageType::ECHO_REPLY);
             client->header.data_length = MsgHeader::HEADER_SIZE;
             client->current_phase = NetClient::Phase::SEND;
             client->next_phase = NetClient::Phase::RECV;
             client->io_state = NetClient::IoOp::WRITE;
             break;
-        case msgtype::VERSION_REQUEST:
+        case MessageType::VERSION_REQUEST:
             // TODO: Implement version request
             break;
-        case msgtype::POWER_OFF:
+        case MessageType::POWER_OFF:
             fence_action(&Server::fence_action_power_off, client);
             break;
-        case msgtype::POWER_ON:
+        case MessageType::POWER_ON:
             fence_action(&Server::fence_action_power_off, client);
             break;
-        case msgtype::REBOOT:
+        case MessageType::REBOOT:
             fence_action(&Server::fence_action_power_off, client);
             break;
-        case msgtype::FENCE_SUCCESS:
+        case MessageType::FENCE_SUCCESS:
             // fall-through
-        case msgtype::FENCE_FAIL:
+        case MessageType::FENCE_FAIL:
             // fall-through
-        case msgtype::ECHO_REPLY:
+        case MessageType::ECHO_REPLY:
             // fall-through
         default:
             std::cerr << "Warning: Invalid request from client with socket_fd = " << client->socket_fd <<
@@ -571,8 +571,8 @@ void ServerConnector::fence_action(const Server::fence_action_method fence, NetC
             bool success_flag = (ufh_server->*fence)(client->node_name, client->secret);
 
             client->header.msg_type = success_flag ?
-                static_cast<uint16_t> (msgtype::FENCE_SUCCESS) :
-                static_cast<uint16_t> (msgtype::FENCE_FAIL);
+                static_cast<uint16_t> (MessageType::FENCE_SUCCESS) :
+                static_cast<uint16_t> (MessageType::FENCE_FAIL);
             client->header.data_length = MsgHeader::HEADER_SIZE;
             client->current_phase = NetClient::Phase::SEND;
             // FIXME: For debugging, disconnect after replying; should probably go back to RECV for production release

@@ -112,7 +112,7 @@ void ClientConnector::clear_io_buffer() noexcept
 // @throws InetException, OsException
 bool ClientConnector::check_connection()
 {
-    header.msg_type = static_cast<uint16_t> (msgtype::ECHO_REQUEST);
+    header.msg_type = static_cast<uint16_t> (MessageType::ECHO_REQUEST);
     header.data_length = MsgHeader::HEADER_SIZE;
 
     header.serialize(io_buffer);
@@ -123,7 +123,7 @@ bool ClientConnector::check_connection()
     receive_message();
     header.deserialize(io_buffer);
 
-    return header.is_msg_type(msgtype::ECHO_REPLY);
+    return header.is_msg_type(MessageType::ECHO_REPLY);
 }
 
 // @throws InetException, OsException
