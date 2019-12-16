@@ -13,6 +13,7 @@
 #include "Queue.h"
 #include "WorkerPool.h"
 #include "WorkerThreadInvocation.h"
+#include "Shared.h"
 
 extern "C"
 {
@@ -30,7 +31,8 @@ class ServerConnector
   public:
     static const size_t MAX_CONNECTIONS;
     static const size_t MAX_CONNECTION_BACKLOG;
-    static const int SOCKET_FD_NONE;
+
+    static const char SELECTOR_TRIGGER_BYTE;
 
     // Locking order:
     //     1. com_queue_lock
@@ -73,7 +75,7 @@ class ServerConnector
         struct sockaddr*    address         = nullptr;
         socklen_t           address_length  = 0;
         int                 socket_domain   = AF_INET6;
-        int                 socket_fd       = SOCKET_FD_NONE;
+        int                 socket_fd       = sys::FD_NONE;
         Phase               current_phase   = Phase::RECV;
         IoOp                io_state        = IoOp::NOOP;
         MsgHeader           header;
@@ -101,10 +103,12 @@ class ServerConnector
     struct sockaddr*    address         = nullptr;
     socklen_t           address_length  = 0;
     int                 socket_domain   = AF_INET6;
-    int                 socket_fd       = SOCKET_FD_NONE;
+    int                 socket_fd       = sys::FD_NONE;
     fd_set              *read_fd_set    = nullptr;
     fd_set              *write_fd_set   = nullptr;
     ClientAlloc         client_pool     = ClientAlloc(MAX_CONNECTIONS);
+
+    int                 selector_trigger[2];
 
     Queue<NetClient>        com_queue;
     Queue<NetClient>        action_queue;
@@ -128,6 +132,7 @@ class ServerConnector
     virtual ServerConnector& operator=(const ServerConnector& orig) = delete;
     virtual ServerConnector& operator=(ServerConnector&& orig) = delete;
 
+    // @throws InetException, OsException
     virtual void run(WorkerPool& thread_pool);
 
     // Caller must have locked the client_queue_lock
@@ -138,6 +143,17 @@ class ServerConnector
   private:
     // Caller must have locked the action_queue_lock
     void process_action_queue() noexcept;
+
+    // @throws InetException, OsException
+    void init();
+
+    // @throws InetException, OsException
+    void selector_loop(WorkerPool& thread_pool);
+
+    // Caller must hold the com_queue_lock
+    void wakeup_selector();
+
+    void cleanup();
 
     void accept_connection();
     bool receive_message(NetClient* const current_client);
@@ -152,8 +168,6 @@ class ServerConnector
     void clients_init_ipv4();
     // @throws std::bad_alloc
     void clients_init_ipv6();
-
-    void close_fd(int& fd) noexcept;
 };
 
 #endif /* SERVERCONNECTOR_H */

@@ -2,6 +2,30 @@
 #include <RangeException.h>
 #include "exceptions.h"
 
+#include <iostream>
+
+namespace sys
+{
+    const int FD_NONE = -1;
+
+    const size_t PIPE_READ_END  = 0;
+    const size_t PIPE_WRITE_END = 1;
+
+    void close_fd(int& fd) noexcept
+    {
+        if (fd >= 0)
+        {
+            int rc = 0;
+            do
+            {
+                rc = close(fd);
+            }
+            while (rc != 0 && errno == EINTR);
+            fd = FD_NONE;
+        }
+    }
+}
+
 namespace keyword
 {
     const char* const PROTO_IPV4 = "IPV4";
@@ -28,13 +52,13 @@ namespace protocol
             field_buffer.clear();
             if (offset < io_buffer_data_length && io_buffer_data_length - offset >= 2)
             {
-                uint16_t field_length = static_cast<uint16_t> (io_buffer[offset]) << 8;
-                field_length |= static_cast<uint16_t> (io_buffer[offset + 1]);
+                uint16_t field_length = static_cast<unsigned char> (io_buffer[offset]) << 8;
+                field_length |= static_cast<unsigned char> (io_buffer[offset + 1]);
 
                 const size_t remain_length = io_buffer_data_length - offset - 2;
                 if (field_length <= remain_length)
                 {
-                    field_buffer.overwrite(0, io_buffer, offset + 2, field_length);
+                    field_buffer.append_raw(io_buffer, offset + 2, offset + 2 + field_length);
                     offset += field_length + 2;
                     have_field = true;
                 }
@@ -57,17 +81,17 @@ namespace protocol
 
     // @throws ProtocolException
     void split_key_value_pair(
-        CharBuffer& src_data,
+        CharBuffer& key,
         CharBuffer& value
     )
     {
         try
         {
-            const size_t split_idx = src_data.index_of(KEY_VALUE_SPLIT_SEQ);
+            const size_t split_idx = key.index_of(KEY_VALUE_SPLIT_SEQ);
             if (split_idx != CharBuffer::NPOS)
             {
-                src_data.substring(value, split_idx + KEY_VALUE_SPLIT_SEQ.length(), src_data.length());
-                src_data.substring(0, split_idx);
+                value.substring(key, split_idx + KEY_VALUE_SPLIT_SEQ.length(), key.length());
+                key.substring(0, split_idx);
             }
             else
             {

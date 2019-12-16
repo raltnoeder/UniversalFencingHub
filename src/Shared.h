@@ -2,6 +2,20 @@
 #define SHARED_H
 
 #include <CharBuffer.h>
+extern "C"
+{
+    #include <unistd.h>
+}
+
+namespace sys
+{
+    extern const int FD_NONE;
+
+    extern const size_t PIPE_READ_END;
+    extern const size_t PIPE_WRITE_END;
+
+    void close_fd(int& fd) noexcept;
+}
 
 namespace keyword
 {
