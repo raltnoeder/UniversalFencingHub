@@ -72,6 +72,7 @@ const char* const OsException::DSC_INVALID_SELECT_FD    = "Invalid filedescripto
 const char* const OsException::DSC_IO_ERROR             = "I/O error";
 const char* const OsException::DSC_NBLK_IO_ERROR        = "Non-blocking I/O initialization failed";
 const char* const OsException::DSC_IPC_ERROR            = "IPC setup failed";
+const char* const OsException::DSC_DYN_LOAD_ERROR       = "Dynamic loader/linker failed";
 
 OsException::OsException() noexcept
 {
@@ -107,6 +108,9 @@ const char* OsException::get_error_description() const noexcept
             break;
         case ErrorId::IPC_ERROR:
             description = DSC_IPC_ERROR;
+            break;
+        case ErrorId::DYN_LOAD_ERROR:
+            description = DSC_DYN_LOAD_ERROR;
             break;
         case ErrorId::UNKNOWN:
             // fall-through

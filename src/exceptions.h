@@ -64,7 +64,9 @@ class OsException : public std::exception
         // Error setting up nonblocking I/O
         NBLK_IO_ERROR       = 3,
         // Setting up the selector failed
-        IPC_ERROR           = 4
+        IPC_ERROR           = 4,
+        // Dynamic load of a library failed
+        DYN_LOAD_ERROR      = 5
     };
 
     static const char* const DSC_UNKNOWN;
@@ -72,6 +74,7 @@ class OsException : public std::exception
     static const char* const DSC_IO_ERROR;
     static const char* const DSC_NBLK_IO_ERROR;
     static const char* const DSC_IPC_ERROR;
+    static const char* const DSC_DYN_LOAD_ERROR;
 
   private:
     ErrorId exc_error = ErrorId::UNKNOWN;
