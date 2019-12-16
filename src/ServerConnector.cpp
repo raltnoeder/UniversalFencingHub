@@ -359,7 +359,7 @@ bool ServerConnector::receive_message(NetClient* const client)
 
     const size_t req_read_size = client->io_offset < MsgHeader::HEADER_SIZE ?
         MsgHeader::HEADER_SIZE - client->io_offset :
-        NetClient::IO_BUFFER_SIZE - client->io_offset;
+        client->header.data_length - client->io_offset;
     const ssize_t read_size = recv(
         client->socket_fd,
         &(client->io_buffer[client->io_offset]),
@@ -380,15 +380,11 @@ bool ServerConnector::receive_message(NetClient* const client)
         else
         if (client->io_offset >= MsgHeader::HEADER_SIZE)
         {
-            client->header.msg_type = MsgHeader::bytes_to_field_value(
-                client->io_buffer, MsgHeader::MSG_TYPE_OFFSET
-            );
-            client->header.data_length = std::min(
-                static_cast<uint16_t> (NetClient::IO_BUFFER_SIZE),
-                MsgHeader::bytes_to_field_value(
-                    client->io_buffer, MsgHeader::DATA_LENGTH_OFFSET
-                )
-            );
+            client->header.deserialize(client->io_buffer);
+            if (client->header.data_length > NetClient::IO_BUFFER_SIZE)
+            {
+                client->header.data_length = NetClient::IO_BUFFER_SIZE;
+            }
             client->have_header = true;
 
             if (client->header.data_length <= MsgHeader::HEADER_SIZE)
@@ -413,20 +409,16 @@ bool ServerConnector::send_message(NetClient* const client)
 
     if (!client->have_header)
     {
-        MsgHeader::field_value_to_bytes(
-            client->header.msg_type,
-            client->io_buffer,
-            MsgHeader::MSG_TYPE_OFFSET
-        );
-        client->header.data_length = std::max(
-            client->header.data_length,
-            static_cast<uint16_t> (MsgHeader::HEADER_SIZE)
-        );
-        MsgHeader::field_value_to_bytes(
-            client->header.data_length,
-            client->io_buffer,
-            MsgHeader::DATA_LENGTH_OFFSET
-        );
+        if (client->header.data_length < MsgHeader::HEADER_SIZE)
+        {
+            client->header.data_length = static_cast<uint16_t> (MsgHeader::HEADER_SIZE);
+        }
+        else
+        if (client->header.data_length > NetClient::IO_BUFFER_SIZE)
+        {
+            client->header.data_length = static_cast<uint16_t> (NetClient::IO_BUFFER_SIZE);
+        }
+        client->header.serialize(client->io_buffer);
         client->have_header = true;
     }
 
