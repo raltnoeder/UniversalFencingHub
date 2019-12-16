@@ -45,15 +45,16 @@ class Client
     virtual Client& operator=(const Client& other) = delete;
     virtual Client& operator=(Client&& orig) = default;
 
-    // @throws std::bad_alloc
+    // @throws std::bad_alloc, ClientException
     virtual ExitCode run();
 
     virtual uint32_t get_version_code() noexcept;
     virtual const char* get_version() noexcept;
 
   private:
-    struct FenceParameters
+    class FenceParameters
     {
+      public:
         std::string action;
         bool have_action = false;
 
@@ -68,10 +69,23 @@ class Client
 
         std::string nodename;
         bool have_nodename = false;
+
+        bool have_all_parameters() const;
     };
 
-    // @throws std::bad_alloc, OsException
+    // @throws std::bad_alloc, OsException, ClientException
     void read_parameters(FenceParameters& params);
+
+    // @throws std::bad_alloc, OsException, InetException, ClientException
+    void dispatch_request(const FenceParameters& params);
+
+    // @throws std::bad_alloc, ClientException
+    void update_parameter(
+        const std::string& param_key,
+        const std::string& param_value,
+        std::string& param,
+        bool& have_param
+    );
 };
 
 #endif /* CLIENT_H */

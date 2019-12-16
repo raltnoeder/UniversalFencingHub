@@ -1,5 +1,6 @@
 #include "Client.h"
 #include "version.h"
+#include "client_exceptions.h"
 
 #include <new>
 #include <memory>
@@ -47,7 +48,7 @@ uint32_t Client::get_version_code() noexcept
     return ufh::VERSION_CODE;
 }
 
-// @throws std::bad_alloc
+// @throws std::bad_alloc, ClientException
 Client::ExitCode Client::run()
 {
     std::cout << "DEBUG: Client::run() invoked, pgm_call_path = " << pgm_call_path << std::endl;
@@ -60,7 +61,7 @@ Client::ExitCode Client::run()
     return ExitCode::FENCING_FAILURE;
 }
 
-// @throws std::bad_alloc, OsException
+// @throws std::bad_alloc, OsException, ClientException
 void Client::read_parameters(FenceParameters& params)
 {
     std::unique_ptr<char> line_buffer_mgr(new char[LINE_BUFFER_SIZE]);
@@ -88,32 +89,27 @@ void Client::read_parameters(FenceParameters& params)
 
                 if (param_key == KEY_ACTION)
                 {
-                    params.action = param_value;
-                    params.have_action = true;
+                    update_parameter(KEY_ACTION, param_value, params.action, params.have_action);
                 }
                 else
                 if (param_key == KEY_IPADDR)
                 {
-                    params.ip_address = param_value;
-                    params.have_ip_address = true;
+                    update_parameter(KEY_IPADDR, param_value, params.ip_address, params.have_ip_address);
                 }
                 else
                 if (param_key == KEY_PORT)
                 {
-                    params.tcp_port = param_value;
-                    params.have_tcp_port = true;
+                    update_parameter(KEY_PORT, param_value, params.tcp_port, params.have_tcp_port);
                 }
                 else
                 if (param_key == KEY_SECRET)
                 {
-                    params.secret = param_value;
-                    params.have_secret = true;
+                    update_parameter(KEY_SECRET, param_value, params.secret, params.have_secret);
                 }
                 else
                 if (param_key == KEY_NODENAME)
                 {
-                    params.nodename = param_value;
-                    params.have_nodename = true;
+                    update_parameter(KEY_NODENAME, param_value, params.nodename, params.have_nodename);
                 }
                 else
                 {
@@ -132,6 +128,107 @@ void Client::read_parameters(FenceParameters& params)
     }
 }
 
+// @throws std::bad_alloc, OsException, InetException, ClientException
+void Client::dispatch_request(const FenceParameters& params)
+{
+    if (!params.have_all_parameters())
+    {
+        std::string error_msg("The following required paramters were not specified by the request:\n");
+        if (!params.have_action)
+        {
+            error_msg += "    " + KEY_ACTION;
+        }
+        if (!params.have_ip_address)
+        {
+            error_msg += "    " + KEY_IPADDR;
+        }
+        if (!params.have_nodename)
+        {
+            error_msg += "    " + KEY_NODENAME;
+        }
+        if (!params.have_secret)
+        {
+            error_msg += "    " + KEY_SECRET;
+        }
+        if (!params.have_tcp_port)
+        {
+            error_msg += "    " + KEY_PORT;
+        }
+        throw ClientException(error_msg);
+    }
+
+    if (params.action == ACTION_OFF || params.action == ACTION_ON || params.action == ACTION_REBOOT)
+    {
+        // TODO: Invoke fencing action
+    }
+    else
+    if (params.action == ACTION_METADATA)
+    {
+        // TODO: Output fencing agent meta data
+    }
+    else
+    if (params.action == ACTION_LIST)
+    {
+        // TODO: Not implemented, exit with the appropriate exit code
+    }
+    else
+    if (params.action == ACTION_MONITOR)
+    {
+        // TODO: Perform ping request
+    }
+    else
+    if (params.action == ACTION_STATUS)
+    {
+        // TODO: Is this implemented? Check API standard on what this is supposed to do
+    }
+    else
+    if (params.action == ACTION_START || params.action == ACTION_STOP)
+    {
+        // TODO: Those are effectively no-ops for this agent, exit with the appropriate exit code
+    }
+    else
+    {
+        std::string error_msg("Request for invalid action '");
+        error_msg += params.action;
+        error_msg += "'";
+        throw ClientException(error_msg);
+    }
+}
+
+// @throws std::bad_alloc, ClientException
+void Client::update_parameter(
+    const std::string& param_key,
+    const std::string& param_value,
+    std::string& param,
+    bool& have_param
+)
+{
+    if (!have_param)
+    {
+        param = param_value;
+        have_param = true;
+    }
+    else
+    {
+        if (param == param_value)
+        {
+            std::cerr << "Warning: Duplicate parameter \"" << param_key << "\"" << std::endl;
+        }
+        else
+        {
+            std::string error_msg("Conflicting duplicate parameter \"");
+            error_msg += param_key;
+            error_msg += "\"";
+            throw ClientException(error_msg);
+        }
+    }
+}
+
+bool Client::FenceParameters::have_all_parameters() const
+{
+    return have_action && have_ip_address && have_nodename && have_secret && have_tcp_port;
+}
+
 int main(int argc, char* argv[])
 {
     int rc = static_cast<int> (Client::ExitCode::FENCING_FAILURE);
@@ -141,6 +238,10 @@ int main(int argc, char* argv[])
         Client instance(pgm_call_path);
         Client::ExitCode instance_rc = instance.run();
         rc = static_cast<int> (instance_rc);
+    }
+    catch (ClientException& client_exc)
+    {
+        std::cerr << pgm_call_path << ": " << client_exc.what() << std::endl;
     }
     catch (std::bad_alloc&)
     {
