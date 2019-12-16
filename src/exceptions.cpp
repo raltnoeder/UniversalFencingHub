@@ -116,3 +116,11 @@ const char* OsException::what() const noexcept
 {
     return get_error_description();
 }
+
+ProtocolException::ProtocolException()
+{
+}
+
+ProtocolException::~ProtocolException() noexcept
+{
+}

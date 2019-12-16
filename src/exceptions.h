@@ -86,4 +86,15 @@ class OsException : public std::exception
     virtual const char* what() const noexcept override;
 };
 
+class ProtocolException : public std::exception
+{
+  public:
+    ProtocolException();
+    virtual ~ProtocolException() noexcept;
+    ProtocolException(const ProtocolException& other) = default;
+    ProtocolException(ProtocolException&& orig) = default;
+    virtual ProtocolException& operator=(const ProtocolException& other) = default;
+    virtual ProtocolException& operator=(ProtocolException&& orig) = default;
+};
+
 #endif /* EXCEPTIONS_H */
