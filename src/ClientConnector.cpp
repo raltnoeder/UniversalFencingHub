@@ -109,17 +109,21 @@ void ClientConnector::clear_io_buffer() noexcept
     zero_memory(io_buffer, IO_BUFFER_SIZE);
 }
 
+// @throws InetException, OsException
 bool ClientConnector::check_connection()
 {
     header.msg_type = static_cast<uint16_t> (msgtype::ECHO_REQUEST);
-    header.data_length = 0;
-    header.field_value_to_bytes(header.msg_type, io_buffer, MsgHeader::MSG_TYPE_OFFSET);
-    header.field_value_to_bytes(header.data_length, io_buffer, MsgHeader::DATA_LENGTH_OFFSET);
+    header.data_length = MsgHeader::HEADER_SIZE;
 
-    // TODO: send request
-    // TODO: receive reply
+    header.serialize(io_buffer);
+    send_message();
 
-    return rc;
+    header.clear();
+
+    receive_message();
+    header.deserialize(io_buffer);
+
+    return header.is_msg_type(msgtype::ECHO_REPLY);
 }
 
 // @throws InetException, OsException
