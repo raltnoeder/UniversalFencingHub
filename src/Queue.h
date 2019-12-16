@@ -39,7 +39,7 @@ class Queue
     };
 
   private:
-    size_t size;
+    size_t size  = 0;
     T* head_node = nullptr;
     T* tail_node = nullptr;
 
