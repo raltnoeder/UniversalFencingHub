@@ -1,12 +1,14 @@
 #ifndef SERVERPARAMETERS_H
 #define SERVERPARAMETERS_H
 
+#include <new>
+#include <memory>
 #include <CharBuffer.h>
+#include "Arguments.h"
 
-class ServerParameters
+class ServerParameters : public Arguments
 {
   public:
-    static const size_t MAX_KEY_SIZE;
     static const size_t MAX_PARAMETER_SIZE;
 
     static const char* const KEY_PROTOCOL;
@@ -15,7 +17,6 @@ class ServerParameters
     static const char* const KEY_FENCE_MODULE;
 
     static const CharBuffer OPT_PREFIX;
-    static const char KEY_VALUE_SPLIT_CHAR;
 
     // @throws std::bad_alloc
     ServerParameters();
@@ -25,33 +26,11 @@ class ServerParameters
     virtual ServerParameters& operator=(const ServerParameters& other) = default;
     virtual ServerParameters& operator=(ServerParameters&& orig) = default;
 
-    // @throws std::bad_alloc, ServerException
+    // @throws std::bad_alloc
+    virtual void initialize();
+
+    // @throws std::bad_alloc, ArgumentsException
     virtual void read_parameters(int argc, const char* const argv[]);
-
-    // @throws std::bad_alloc, ServerException
-    virtual CharBuffer& get_protocol();
-
-    // @throws std::bad_alloc, ServerException
-    virtual CharBuffer& get_bind_address();
-
-    // @throws std::bad_alloc, ServerException
-    virtual CharBuffer& get_tcp_port();
-
-    // @throws std::bad_alloc, ServerException
-    virtual CharBuffer& get_fence_module();
-
-  private:
-    CharBuffer  protocol;
-    bool        have_protocol = false;
-
-    CharBuffer  bind_address;
-    bool        have_bind_address = false;
-
-    CharBuffer  tcp_port;
-    bool        have_tcp_port = false;
-
-    CharBuffer  fence_module;
-    bool        have_fence_module = false;
 };
 
 #endif /* SERVERPARAMETERS_H */

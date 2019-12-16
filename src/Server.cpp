@@ -42,19 +42,24 @@ int Server::run(const int argc, const char* const argv[]) noexcept
             "Version " << ufh::VERSION_STRING << ", Version code 0x" << std::hex << std::uppercase <<
             std::setw(8) << std::setfill('0') << ufh::VERSION_CODE << "\n\n" << std::flush;
 
-        ServerParameters params;
-        params.read_parameters(argc, argv);
+        std::unique_ptr<PluginMgr> plugin;
+        std::unique_ptr<ServerConnector> connector;
+        {
+            std::unique_ptr<ServerParameters> params(new ServerParameters());
+            params->initialize();
+            params->read_parameters(argc, argv);
+            params->check_required();
 
-        const CharBuffer& protocol = params.get_protocol();
-        const CharBuffer& bind_address = params.get_bind_address();
-        const CharBuffer& port = params.get_tcp_port();
-        const CharBuffer& fence_module = params.get_fence_module();
+            const CharBuffer& protocol = params->get_value(ServerParameters::KEY_PROTOCOL);
+            const CharBuffer& bind_address = params->get_value(ServerParameters::KEY_BIND_ADDRESS);
+            const CharBuffer& port = params->get_value(ServerParameters::KEY_TCP_PORT);
+            const CharBuffer& fence_module = params->get_value(ServerParameters::KEY_FENCE_MODULE);
 
-        PluginMgr plugin(fence_module.c_str(), this);
-
-        std::unique_ptr<ServerConnector> connector(
-            new ServerConnector(*this, *stop_signal, protocol, bind_address, port)
-        );
+            plugin = std::unique_ptr<PluginMgr>(new PluginMgr(fence_module.c_str(), this));
+            connector = std::unique_ptr<ServerConnector>(
+                new ServerConnector(*this, *stop_signal, protocol, bind_address, port)
+            );
+        }
 
         std::unique_ptr<WorkerPool> thread_pool(
             new WorkerPool(
@@ -76,10 +81,10 @@ int Server::run(const int argc, const char* const argv[]) noexcept
     {
         std::cerr << ufh::LOGPFX_ERROR << "Initialization failed: Out of memory" << std::endl;
     }
-    catch (ServerInitException& srv_exc)
+    catch (Arguments::ArgumentsException& args_exc)
     {
-        std::cerr << ufh::LOGPFX_ERROR << "Server initialization failed" << std::endl;
-        std::cerr << ufh::LOGPFX_CONT << srv_exc.what() << std::endl;
+        std::cerr << ufh::LOGPFX_ERROR << "Server initialization failed due to incorrect arguments" << std::endl;
+        std::cerr << args_exc.what() << "\n\n" << std::flush;
     }
     catch (OsException& os_exc)
     {
