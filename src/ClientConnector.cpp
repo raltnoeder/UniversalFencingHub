@@ -112,18 +112,70 @@ void ClientConnector::clear_io_buffer() noexcept
 // @throws InetException, OsException
 bool ClientConnector::check_connection()
 {
-    header.msg_type = static_cast<uint16_t> (MessageType::ECHO_REQUEST);
+    header.set_msg_type(MessageType::ECHO_REQUEST);
     header.data_length = MsgHeader::HEADER_SIZE;
 
-    header.serialize(io_buffer);
     send_message();
 
-    header.clear();
-
     receive_message();
-    header.deserialize(io_buffer);
 
     return header.is_msg_type(MessageType::ECHO_REPLY);
+}
+
+// @throws std::bad_alloc, InetException, OsException, ProtocolException
+bool ClientConnector::fence_poweroff(const std::string& nodename, const std::string& secret)
+{
+    return fence_action_impl(MessageType::POWER_OFF, nodename, secret);
+}
+
+// @throws std::bad_alloc, InetException, OsException, ProtocolException
+bool ClientConnector::fence_poweron(const std::string& nodename, const std::string& secret)
+{
+    return fence_action_impl(MessageType::POWER_ON, nodename, secret);
+}
+
+// @throws std::bad_alloc, InetException, OsException, ProtocolException
+bool ClientConnector::fence_reboot(const std::string& nodename, const std::string& secret)
+{
+    return fence_action_impl(MessageType::REBOOT, nodename, secret);
+}
+
+// @throws InetException, OsException, ProtocolException
+bool ClientConnector::fence_action_impl(
+    const MessageType& msg_type,
+    const std::string& nodename,
+    const std::string& secret
+)
+{
+    std::string nodename_param(protocol::NODENAME);
+    nodename_param += protocol::KEY_VALUE_SPLIT_SEQ.c_str() + nodename;
+
+    std::string secret_param(protocol::SECRET);
+    secret_param += protocol::KEY_VALUE_SPLIT_SEQ.c_str() + secret;
+
+
+    header.set_msg_type(msg_type);
+    size_t offset = MsgHeader::HEADER_SIZE;
+    protocol::write_field(io_buffer, IO_BUFFER_SIZE, offset, nodename_param);
+    protocol::write_field(io_buffer, IO_BUFFER_SIZE, offset, secret_param);
+    header.data_length = static_cast<uint16_t> (offset);
+
+    send_message();
+
+    receive_message();
+
+    bool rc = false;
+    if (header.is_msg_type(MessageType::FENCE_SUCCESS))
+    {
+        rc = true;
+    }
+    else
+    if (!header.is_msg_type(MessageType::FENCE_FAIL))
+    {
+        throw ProtocolException();
+    }
+
+    return rc;
 }
 
 // @throws InetException, OsException
@@ -134,6 +186,7 @@ void ClientConnector::send_message()
         std::max(MsgHeader::HEADER_SIZE, static_cast<size_t> (header.data_length)),
         IO_BUFFER_SIZE
     );
+    header.serialize(io_buffer);
     while (io_offset < send_length)
     {
         const size_t req_write_size = send_length - io_offset;
@@ -162,6 +215,9 @@ void ClientConnector::send_message()
 // @throws InetExeption, OsException
 void ClientConnector::receive_message()
 {
+    header.clear();
+    clear_io_buffer();
+
     bool have_header = false;
     size_t io_offset = 0;
     size_t receive_length = MsgHeader::HEADER_SIZE;

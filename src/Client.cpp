@@ -181,7 +181,7 @@ Client::ExitCode Client::dispatch_request(const FenceParameters& params)
 
     if (params.action == ACTION_OFF || params.action == ACTION_ON || params.action == ACTION_REBOOT)
     {
-        // TODO: Invoke fencing action
+        rc = fence_action(params) ? ExitCode::FENCING_SUCCESS : ExitCode::FENCING_FAILURE;
     }
     else
     if (params.action == ACTION_METADATA)
@@ -298,7 +298,7 @@ std::unique_ptr<ClientConnector> Client::init_connector(const FenceParameters& p
     );
 }
 
-// @throws std::bad_alloc, OsException, InetException, ClientException
+// @throws std::bad_alloc, OsException, InetException, ClientException, ProtocolException
 bool Client::check_server_connection(const FenceParameters& params)
 {
     bool rc = false;
@@ -308,6 +308,43 @@ bool Client::check_server_connection(const FenceParameters& params)
 
     connector.connect_to_server();
     rc = connector.check_connection();
+    connector.disconnect_from_server();
+
+    return rc;
+}
+
+// @throws std::bad_alloc, OsException, InetException, ClientException, ProtocolException
+bool Client::fence_action(const FenceParameters& params)
+{
+    bool rc = false;
+
+    std::unique_ptr<ClientConnector> connector_mgr = init_connector(params);
+    ClientConnector& connector = *connector_mgr;
+
+    connector.connect_to_server();
+
+    if (params.action == ACTION_OFF)
+    {
+        rc = connector.fence_poweroff(params.nodename, params.secret);
+    }
+    else
+    if (params.action == ACTION_ON)
+    {
+        rc = connector.fence_poweron(params.nodename, params.secret);
+    }
+    else
+    if (params.action == ACTION_REBOOT)
+    {
+        rc = connector.fence_reboot(params.nodename, params.secret);
+    }
+    else
+    {
+        std::string error_msg("Logic error: fence_action(...) called with invalid action \"");
+        error_msg += params.action;
+        error_msg += "\"";
+        throw ClientException(error_msg);
+    }
+
     connector.disconnect_from_server();
 
     return rc;

@@ -25,7 +25,7 @@ const size_t ServerConnector::MAX_CONNECTION_BACKLOG        = 24;
 
 const size_t ServerConnector::NetClient::IO_BUFFER_SIZE     = 1024;
 const size_t ServerConnector::NetClient::FIELD_SIZE         = 1024;
-const size_t ServerConnector::NetClient::NODE_NAME_SIZE     = 255;
+const size_t ServerConnector::NetClient::NODENAME_SIZE     = 255;
 
 const char ServerConnector::SELECTOR_TRIGGER_BYTE    = static_cast<char> (0xFF);
 
@@ -552,9 +552,9 @@ void ServerConnector::fence_action(const Server::fence_action_method fence, NetC
         {
             protocol::read_field(client->io_buffer, client->io_offset, field_offset, client->key_buffer);
             protocol::split_key_value_pair(client->key_buffer, client->value_buffer);
-            if (client->key_buffer == protocol::NODE_NAME)
+            if (client->key_buffer == protocol::NODENAME)
             {
-                client->node_name = client->value_buffer;
+                client->nodename = client->value_buffer;
             }
             else
             if (client->key_buffer == protocol::SECRET)
@@ -566,9 +566,9 @@ void ServerConnector::fence_action(const Server::fence_action_method fence, NetC
         client->clear_io_buffer();
         client->header.clear();
 
-        if (client->node_name.length() > 0)
+        if (client->nodename.length() > 0)
         {
-            bool success_flag = (ufh_server->*fence)(client->node_name, client->secret);
+            bool success_flag = (ufh_server->*fence)(client->nodename, client->secret);
 
             client->header.msg_type = success_flag ?
                 static_cast<uint16_t> (MessageType::FENCE_SUCCESS) :
@@ -636,7 +636,7 @@ void ServerConnector::clients_init_ipv6()
 ServerConnector::NetClient::NetClient():
     key_buffer(FIELD_SIZE),
     value_buffer(FIELD_SIZE),
-    node_name(NODE_NAME_SIZE),
+    nodename(NODENAME_SIZE),
     secret(protocol::MAX_SECRET_LENGTH)
 {
     io_buffer_mgr = std::unique_ptr<char[]>(new char[IO_BUFFER_SIZE]);
@@ -655,7 +655,7 @@ void ServerConnector::NetClient::clear() noexcept
     next_phase      = Phase::PENDING;
     io_state        = IoOp::NOOP;
     header.clear();
-    node_name.wipe();
+    nodename.wipe();
     secret.wipe();
     key_buffer.wipe();
     value_buffer.wipe();

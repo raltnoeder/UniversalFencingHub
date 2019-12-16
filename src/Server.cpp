@@ -93,27 +93,27 @@ int Server::run(const int argc, const char* const argv[]) noexcept
     return rc;
 }
 
-bool Server::fence_action_power_off(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept
+bool Server::fence_action_power_off(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept
 {
-    report_fence_action(LABEL_POWER_OFF, node_name);
-    bool success_flag = plugin_functions.ufh_power_off(node_name.c_str(), node_name.length());
-    report_fence_action_result(LABEL_POWER_OFF, node_name, success_flag);
+    report_fence_action(LABEL_POWER_OFF, nodename);
+    bool success_flag = plugin_functions.ufh_power_off(nodename.c_str(), nodename.length());
+    report_fence_action_result(LABEL_POWER_OFF, nodename, success_flag);
     return success_flag;
 }
 
-bool Server::fence_action_power_on(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept
+bool Server::fence_action_power_on(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept
 {
-    report_fence_action(LABEL_POWER_ON, node_name);
-    bool success_flag = plugin_functions.ufh_power_on(node_name.c_str(), node_name.length());
-    report_fence_action_result(LABEL_POWER_ON, node_name, success_flag);
+    report_fence_action(LABEL_POWER_ON, nodename);
+    bool success_flag = plugin_functions.ufh_power_on(nodename.c_str(), nodename.length());
+    report_fence_action_result(LABEL_POWER_ON, nodename, success_flag);
     return success_flag;
 }
 
-bool Server::fence_action_reboot(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept
+bool Server::fence_action_reboot(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept
 {
-    report_fence_action(LABEL_REBOOT, node_name);
-    bool success_flag = plugin_functions.ufh_reboot(node_name.c_str(), node_name.length());
-    report_fence_action_result(LABEL_REBOOT, node_name, success_flag);
+    report_fence_action(LABEL_REBOOT, nodename);
+    bool success_flag = plugin_functions.ufh_reboot(nodename.c_str(), nodename.length());
+    report_fence_action_result(LABEL_REBOOT, nodename, success_flag);
     return success_flag;
 }
 
@@ -127,16 +127,16 @@ uint32_t Server::get_version_code() noexcept
     return ufh::VERSION_CODE;
 }
 
-void Server::report_fence_action(const char* const action, const CharBuffer& node_name)
+void Server::report_fence_action(const char* const action, const CharBuffer& nodename)
 {
     std::unique_lock<std::mutex> scope_lock(stdio_lock);
-    std::cout << "Fencing action " << action << " requested for node " << node_name.c_str() << std::endl;
+    std::cout << "Fencing action " << action << " requested for node " << nodename.c_str() << std::endl;
 }
 
-void Server::report_fence_action_result(const char* const action, const CharBuffer& node_name, const bool success_flag)
+void Server::report_fence_action_result(const char* const action, const CharBuffer& nodename, const bool success_flag)
 {
     std::unique_lock<std::mutex> scope_lock(stdio_lock);
-    std::cout << "Fencing action " << action << " for node " << node_name.c_str() <<
+    std::cout << "Fencing action " << action << " for node " << nodename.c_str() <<
         (success_flag ? " SUCCEEDED" : " FAILED") << std::endl;
 }
 

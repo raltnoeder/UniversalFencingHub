@@ -2,6 +2,8 @@
 #define SHARED_H
 
 #include <CharBuffer.h>
+#include <string>
+
 extern "C"
 {
     #include <unistd.h>
@@ -52,23 +54,53 @@ namespace protocol
 {
     extern const CharBuffer KEY_VALUE_SPLIT_SEQ;
 
-    extern const char* const NODE_NAME;
+    extern const char* const NODENAME;
     extern const char* const SECRET;
 
     extern const size_t MAX_SECRET_LENGTH;
 
     // @throws ProtocolException
     bool read_field(
-        const char* const io_buffer,
-        const size_t io_buffer_length,
+        const char* io_buffer,
+        size_t io_buffer_capacity,
         size_t& offset,
         CharBuffer& field_buffer
+    );
+
+    // @throws ProtocolException
+    bool read_field(
+        const char* io_buffer,
+        size_t io_buffer_capacity,
+        size_t& offset,
+        std::string& field_contents
+    );
+
+    // @throws ProtocolException
+    void write_field(
+        char* io_buffer,
+        size_t io_buffer_capacity,
+        size_t& offset,
+        const CharBuffer& field_buffer
+    );
+
+    // @throws ProtocolException
+    void write_field(
+        char* io_buffer,
+        size_t io_buffer_capacity,
+        size_t& offset,
+        const std::string& field_contents
     );
 
     // @throws ProtocolException
     void split_key_value_pair(
         CharBuffer& src_data,
         CharBuffer& value
+    );
+
+    // @throws std::bad_alloc, ProtocolException
+    void split_key_value_pair(
+        std::string& src_data,
+        std::string& value
     );
 }
 

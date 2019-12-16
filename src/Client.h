@@ -97,8 +97,11 @@ class Client
     // @throws std::bad_alloc, OsException, InetException, ClientException
     std::unique_ptr<ClientConnector> init_connector(const FenceParameters& params);
 
-    // @throws std::bad_alloc, OsException, InetException
+    // @throws std::bad_alloc, OsException, InetException, ClientException, ProtocolException
     bool check_server_connection(const FenceParameters& params);
+
+    // @throws std::bad_alloc, OsException, InetException, ClientException, ProtocolException
+    bool fence_action(const FenceParameters& params);
 };
 
 #endif /* CLIENT_H */

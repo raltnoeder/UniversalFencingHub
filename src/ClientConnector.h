@@ -39,6 +39,15 @@ class ClientConnector
     // @throws InetException, OsException
     virtual bool check_connection();
 
+    // @throws InetException, OsException, ProtocolException
+    virtual bool fence_poweroff(const std::string& nodename, const std::string& secret);
+
+    // @throws InetException, OsException, ProtocolException
+    virtual bool fence_poweron(const std::string& nodename, const std::string& secret);
+
+    // @throws InetException, OsException, ProtocolException
+    virtual bool fence_reboot(const std::string& nodename, const std::string& secret);
+
     // @throws InetException, OsException
     virtual void send_message();
 
@@ -56,6 +65,13 @@ class ClientConnector
     socklen_t           address_length  = 0;
     int                 socket_domain   = AF_INET6;
     int                 socket_fd       = sys::FD_NONE;
+
+    // @throws InetException, OsException, ProtocolException
+    bool fence_action_impl(
+        const MessageType& msg_type,
+        const std::string& nodename,
+        const std::string& secret
+    );
 };
 
 #endif /* CLIENTCONNECTOR_H */

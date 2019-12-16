@@ -46,7 +46,7 @@ class ServerConnector
       public:
         static const size_t IO_BUFFER_SIZE;
         static const size_t FIELD_SIZE;
-        static const size_t NODE_NAME_SIZE;
+        static const size_t NODENAME_SIZE;
 
         enum class IoOp : uint8_t
         {
@@ -70,7 +70,7 @@ class ServerConnector
         CharBuffer          key_buffer;
         CharBuffer          value_buffer;
 
-        CharBuffer          node_name;
+        CharBuffer          nodename;
         CharBuffer          secret;
 
         struct sockaddr*    address         = nullptr;

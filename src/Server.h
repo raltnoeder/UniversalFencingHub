@@ -10,7 +10,7 @@
 class Server
 {
   public:
-    typedef bool (Server::*fence_action_method)(const CharBuffer& node_name, const CharBuffer& client_secret);
+    typedef bool (Server::*fence_action_method)(const CharBuffer& nodename, const CharBuffer& client_secret);
 
     static const char* const LABEL_POWER_OFF;
     static const char* const LABEL_POWER_ON;
@@ -26,9 +26,9 @@ class Server
     virtual Server& operator=(Server&& orig) = default;
 
     virtual int run(int argc, const char* const argv[]) noexcept;
-    virtual bool fence_action_power_off(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept;
-    virtual bool fence_action_power_on(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept;
-    virtual bool fence_action_reboot(const CharBuffer& node_name, const CharBuffer& client_secret) noexcept;
+    virtual bool fence_action_power_off(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept;
+    virtual bool fence_action_power_on(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept;
+    virtual bool fence_action_reboot(const CharBuffer& nodename, const CharBuffer& client_secret) noexcept;
     virtual const char* get_version() noexcept;
     virtual uint32_t get_version_code() noexcept;
 
@@ -38,8 +38,8 @@ class Server
     // @throws OsException
     void load_plugin(const char* const path);
 
-    void report_fence_action(const char* action, const CharBuffer& node_name);
-    void report_fence_action_result(const char* action, const CharBuffer& node_name, bool success_flag);
+    void report_fence_action(const char* action, const CharBuffer& nodename);
+    void report_fence_action_result(const char* action, const CharBuffer& nodename, bool success_flag);
 };
 
 #endif /* SERVER_H */
