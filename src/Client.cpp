@@ -142,23 +142,23 @@ void Client::dispatch_request(const FenceParameters& params)
         std::string error_msg("The following required paramters were not specified by the request:\n");
         if (!params.have_action)
         {
-            error_msg += "    " + KEY_ACTION;
+            error_msg += "    " + KEY_ACTION + "\n";
         }
         if (!params.have_ip_address)
         {
-            error_msg += "    " + KEY_IPADDR;
+            error_msg += "    " + KEY_IPADDR + "\n";
         }
         if (!params.have_nodename)
         {
-            error_msg += "    " + KEY_NODENAME;
+            error_msg += "    " + KEY_NODENAME + "\n";
         }
         if (!params.have_secret)
         {
-            error_msg += "    " + KEY_SECRET;
+            error_msg += "    " + KEY_SECRET + "\n";
         }
         if (!params.have_tcp_port)
         {
-            error_msg += "    " + KEY_PORT;
+            error_msg += "    " + KEY_PORT + "\n";
         }
         throw ClientException(error_msg);
     }
