@@ -153,6 +153,16 @@ class GenAlloc
         }
     }
 
+    virtual T* object_at_index(const size_t idx)
+    {
+        T* obj {nullptr};
+        if (idx < pool_size)
+        {
+            obj = &pool[idx];
+        }
+        return obj;
+    }
+
     virtual scope_ptr allocate_scope()
     {
         return scope_ptr(allocate(), this->deallocator);
