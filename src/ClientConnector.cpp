@@ -1,8 +1,6 @@
 #include "ClientConnector.h"
 
-#include <CharBuffer.h>
 #include "ip_parse.h"
-#include "Shared.h"
 #include "exceptions.h"
 
 // @throws std::bad_alloc, InetException
@@ -21,7 +19,7 @@ ClientConnector::~ClientConnector() noexcept
 }
 
 // @throws InetException, OsException
-void ClientConnector::connect()
+void ClientConnector::connect_to_server()
 {
     // Allocate socket file descriptor
     socket_fd = socket(socket_domain, SOCK_STREAM, 0);
@@ -44,7 +42,7 @@ void ClientConnector::connect()
         local_address.sin6_flowinfo = 0;
         local_address.sin6_scope_id = 0;
 
-        if (bind(socket_fd, &local_address, local_address_length) != 0)
+        if (bind(socket_fd, reinterpret_cast<struct sockaddr*> (&local_address), local_address_length) != 0)
         {
             throw InetException(InetException::ErrorId::BIND_FAILED);
         }
@@ -61,7 +59,7 @@ void ClientConnector::connect()
         local_address.sin_family = AF_INET;
         local_address.sin_port = 0;
 
-        if (bind(socket_fd, &local_address, local_address_length) != 0)
+        if (bind(socket_fd, reinterpret_cast<struct sockaddr*> (&local_address), local_address_length) != 0)
         {
             throw InetException(InetException::ErrorId::BIND_FAILED);
         }
@@ -74,7 +72,7 @@ void ClientConnector::connect()
     // Connect to the selected peer
     if (connect(socket_fd, address, address_length) != 0)
     {
-        if (errno == EADDRINUSE || errno == EBADF || errno = EISCONN)
+        if (errno == EADDRINUSE || errno == EBADF || errno == EISCONN)
         {
             throw InetException(InetException::ErrorId::SOCKET_ERROR);
         }
@@ -95,7 +93,7 @@ void ClientConnector::connect()
     }
 }
 
-void ClientConnector::disconnect() noexcept
+void ClientConnector::disconnect_from_server() noexcept
 {
     sys::close_fd(socket_fd);
 }

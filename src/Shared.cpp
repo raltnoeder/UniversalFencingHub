@@ -38,6 +38,13 @@ namespace keyword
     const char* const PROTO_IPV6 = "IPV6";
 }
 
+namespace constraints
+{
+    const size_t PROTOCOL_PARAM_SIZE    = 10;
+    const size_t IP_ADDR_PARAM_SIZE     = 60;
+    const size_t PORT_PARAM_SIZE        = 6;
+}
+
 namespace protocol
 {
     const CharBuffer KEY_VALUE_SPLIT_SEQ("=");

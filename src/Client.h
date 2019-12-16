@@ -81,7 +81,7 @@ class Client
     void read_parameters(FenceParameters& params);
 
     // @throws std::bad_alloc, OsException, InetException, ClientException
-    void dispatch_request(const FenceParameters& params);
+    ExitCode dispatch_request(const FenceParameters& params);
 
     // @throws std::bad_alloc, ClientException
     void update_parameter(
@@ -90,6 +90,9 @@ class Client
         std::string& param,
         bool& have_param
     );
+
+    // @throws std::bad_alloc, OsException, InetException
+    bool check_server_connection(const FenceParameters& params);
 };
 
 #endif /* CLIENT_H */

@@ -1,6 +1,11 @@
 #ifndef CLIENTCONNECTOR_H
 #define CLIENTCONNECTOR_H
 
+#include <CharBuffer.h>
+
+#include "MsgHeader.h"
+#include "Shared.h"
+
 extern "C"
 {
     #include <sys/types.h>
@@ -22,6 +27,11 @@ class ClientConnector
     virtual ClientConnector& operator=(const ClientConnector& other) = default;
     virtual ClientConnector& operator=(ClientConnector&& orig) = default;
 
+    // @throws InetException, OsException
+    void connect_to_server();
+
+    void disconnect_from_server() noexcept;
+
   private:
     std::unique_ptr<char[]> address_mgr;
     std::unique_ptr<char[]> io_buffer_mgr;
@@ -34,11 +44,6 @@ class ClientConnector
     socklen_t           address_length  = 0;
     int                 socket_domain   = AF_INET6;
     int                 socket_fd       = sys::FD_NONE;
-
-    // @throws InetException, OsException
-    void connect();
-
-    void disconnect() noexcept;
 };
 
 #endif /* CLIENTCONNECTOR_H */

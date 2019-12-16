@@ -1,6 +1,8 @@
 #include "Client.h"
 #include "version.h"
 #include "client_exceptions.h"
+#include "Shared.h"
+#include "ClientConnector.h"
 
 #include <new>
 #include <memory>
@@ -135,8 +137,10 @@ void Client::read_parameters(FenceParameters& params)
 }
 
 // @throws std::bad_alloc, OsException, InetException, ClientException
-void Client::dispatch_request(const FenceParameters& params)
+Client::ExitCode Client::dispatch_request(const FenceParameters& params)
 {
+    ExitCode rc = ExitCode::FENCING_FAILURE;
+
     if (!params.have_all_parameters())
     {
         std::string error_msg("The following required paramters were not specified by the request:\n");
@@ -180,7 +184,7 @@ void Client::dispatch_request(const FenceParameters& params)
     else
     if (params.action == ACTION_MONITOR)
     {
-        // TODO: Perform ping request
+        rc = check_server_connection(params) ? ExitCode::FENCING_SUCCESS : ExitCode::FENCING_FAILURE;
     }
     else
     if (params.action == ACTION_STATUS)
@@ -199,6 +203,8 @@ void Client::dispatch_request(const FenceParameters& params)
         error_msg += "'";
         throw ClientException(error_msg);
     }
+
+    return rc;
 }
 
 // @throws std::bad_alloc, ClientException
@@ -228,6 +234,31 @@ void Client::update_parameter(
             throw ClientException(error_msg);
         }
     }
+}
+
+// @throws std::bad_alloc, OsException, InetException, ClientException
+bool Client::check_server_connection(const FenceParameters& params)
+{
+    std::unique_ptr<CharBuffer> protocol_string_mgr(new CharBuffer(constraints::PROTOCOL_PARAM_SIZE));
+    std::unique_ptr<CharBuffer> ip_addr_string_mgr(new CharBuffer(constraints::IP_ADDR_PARAM_SIZE));
+    std::unique_ptr<CharBuffer> port_string_mgr(new CharBuffer(constraints::PORT_PARAM_SIZE));
+
+    CharBuffer& protocol_string = *protocol_string_mgr;
+    CharBuffer& ip_addr_string = *ip_addr_string_mgr;
+    CharBuffer& port_string = *port_string_mgr;
+
+    protocol_string = params.protocol.c_str();
+    ip_addr_string = params.ip_address.c_str();
+    port_string = params.tcp_port.c_str();
+
+    std::unique_ptr<ClientConnector> connector_mgr(
+        new ClientConnector(protocol_string, ip_addr_string, port_string)
+    );
+
+    ClientConnector& connector = *connector_mgr;
+    connector.connect_to_server();
+
+    return false;
 }
 
 bool Client::FenceParameters::have_all_parameters() const
