@@ -309,7 +309,7 @@ bool Client::fence_action(const FenceParameters& params)
     else
     if (params.action == ACTION_ON)
     {
-        rc = connector.fence_action_off(params.nodename, params.secret);
+        rc = connector.fence_action_on(params.nodename, params.secret);
     }
     else
     if (params.action == ACTION_REBOOT)
