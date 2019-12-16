@@ -39,6 +39,7 @@ class Queue
     };
 
   private:
+    size_t size;
     T* head_node = nullptr;
     T* tail_node = nullptr;
 
@@ -69,6 +70,7 @@ class Queue
         ins_node->next_node = head_node;
         ins_node->prev_node = nullptr;
         head_node = ins_node;
+        ++size;
     }
 
     virtual void add_last(T* ins_node)
@@ -84,6 +86,7 @@ class Queue
         ins_node->next_node = nullptr;
         ins_node->prev_node = tail_node;
         tail_node = ins_node;
+        ++size;
     }
 
     virtual T* get_first()
@@ -112,6 +115,7 @@ class Queue
                 head_node->prev_node = nullptr;
             }
             rmv_node->next_node = nullptr;
+            --size;
         }
         return rmv_node;
     }
@@ -130,6 +134,7 @@ class Queue
             {
                 tail_node = rmv_node->prev_node;
                 tail_node->next_node = nullptr;
+                --size;
             }
             rmv_node->prev_node = nullptr;
         }
@@ -156,6 +161,7 @@ class Queue
         }
         rmv_node->prev_node = nullptr;
         rmv_node->next_node = nullptr;
+        --size;
     }
 
     virtual void clear()
@@ -170,6 +176,12 @@ class Queue
         }
         head_node = nullptr;
         tail_node = nullptr;
+        size = 0;
+    }
+
+    virtual size_t get_size() const
+    {
+        return size;
     }
 };
 
