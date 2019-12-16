@@ -76,7 +76,9 @@ class OsException : public std::exception
         // Setting up the selector failed
         IPC_ERROR           = 4,
         // Dynamic load of a library failed
-        DYN_LOAD_ERROR      = 5
+        DYN_LOAD_ERROR      = 5,
+        // Signal handling error
+        SIGNAL_HND_ERROR    = 6
     };
 
     static const char* const DSC_UNKNOWN;
@@ -85,6 +87,7 @@ class OsException : public std::exception
     static const char* const DSC_NBLK_IO_ERROR;
     static const char* const DSC_IPC_ERROR;
     static const char* const DSC_DYN_LOAD_ERROR;
+    static const char* const DSC_SIGNAL_HND_ERROR;
 
   private:
     ErrorId exc_error = ErrorId::UNKNOWN;

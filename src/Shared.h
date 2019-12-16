@@ -19,6 +19,11 @@ namespace sys
     void close_fd(int& fd) noexcept;
 }
 
+namespace ufh
+{
+    extern const char WAKEUP_TRIGGER_BYTE;
+}
+
 namespace inet
 {
     extern const char* const IPV6_LOCAL_BIND_ADDRESS;

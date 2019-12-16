@@ -15,13 +15,15 @@
 #include "WorkerPool.h"
 #include "exceptions.h"
 #include "version.h"
+#include "SignalHandler.h"
 
 const char* const Server::LABEL_OFF     = "OFF";
 const char* const Server::LABEL_ON      = "ON";
 const char* const Server::LABEL_REBOOT  = "REBOOT";
 
-Server::Server()
+Server::Server(SignalHandler& signal_handler_ref)
 {
+    stop_signal = &signal_handler_ref;
 }
 
 Server::~Server() noexcept
@@ -49,7 +51,7 @@ int Server::run(const int argc, const char* const argv[]) noexcept
         if (plugin_functions.ufh_plugin_init())
         {
             std::cout << "Initializing ServerConnector" << std::endl;
-            ServerConnector connector(this, protocol, ip_string, port_string);
+            ServerConnector connector(*this, *stop_signal, protocol, ip_string, port_string);
             std::cout << "Initializing WorkerPool" << std::endl;
             WorkerPool thread_pool(
                 &(connector.action_queue_lock),
@@ -144,10 +146,4 @@ void Server::report_fence_action_result(const char* const action, const CharBuff
 void Server::load_plugin(const char* const path)
 {
     plugin::load_plugin(path, plugin_functions);
-}
-
-int main(int argc, char* argv[])
-{
-    Server instance;
-    return instance.run(argc, argv);
 }

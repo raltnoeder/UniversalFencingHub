@@ -5,6 +5,7 @@
 #include <mutex>
 #include <CharBuffer.h>
 
+#include "SignalHandler.h"
 #include "plugin_loader.h"
 
 class Server
@@ -18,7 +19,7 @@ class Server
 
     std::mutex stdio_lock;
 
-    Server();
+    Server(SignalHandler& signal_handler_ref);
     virtual ~Server() noexcept;
     Server(const Server& other) = delete;
     Server(Server&& orig) = default;
@@ -33,6 +34,8 @@ class Server
     virtual uint32_t get_version_code() noexcept;
 
   private:
+    SignalHandler* stop_signal;
+
     plugin::function_table plugin_functions;
 
     // @throws OsException

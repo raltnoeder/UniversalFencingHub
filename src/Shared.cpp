@@ -26,6 +26,11 @@ namespace sys
     }
 }
 
+namespace ufh
+{
+    const char WAKEUP_TRIGGER_BYTE = static_cast<char> (0xFF);
+}
+
 namespace inet
 {
     extern const char* const IPV6_LOCAL_BIND_ADDRESS = "::";

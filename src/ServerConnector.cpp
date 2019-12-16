@@ -27,17 +27,17 @@ const size_t ServerConnector::NetClient::IO_BUFFER_SIZE     = 1024;
 const size_t ServerConnector::NetClient::FIELD_SIZE         = 1024;
 const size_t ServerConnector::NetClient::NODENAME_SIZE     = 255;
 
-const char ServerConnector::SELECTOR_TRIGGER_BYTE    = static_cast<char> (0xFF);
-
 // @throws std::bad_alloc, InetException
 ServerConnector::ServerConnector(
-    Server* const server_ref,
+    Server& server_ref,
+    SignalHandler& stop_signal_ref,
     const CharBuffer& protocol_string,
     const CharBuffer& ip_string,
     const CharBuffer& port_string
 )
 {
-    ufh_server = server_ref;
+    ufh_server = &server_ref;
+    stop_signal = &stop_signal_ref;
 
     selector_trigger[sys::PIPE_READ_END] = sys::FD_NONE;
     selector_trigger[sys::PIPE_WRITE_END] = sys::FD_NONE;
@@ -125,7 +125,8 @@ void ServerConnector::init()
 // @throws InetException, OsException
 void ServerConnector::selector_loop(WorkerPool& thread_pool)
 {
-    while (!stop_flag)
+    stop_signal->enable_wakeup_fd(selector_trigger[sys::PIPE_WRITE_END]);
+    while (!stop_signal->is_signaled())
     {
         FD_ZERO(read_fd_set);
         FD_ZERO(write_fd_set);
@@ -168,100 +169,104 @@ void ServerConnector::selector_loop(WorkerPool& thread_pool)
         }
         ++max_fd;
         int select_rc = select(max_fd, read_fd_set, write_fd_set, nullptr, nullptr);
-        if (select_rc == -1)
+        if (select_rc >= 0)
+        {
+            // Accept pending connections
+            if (FD_ISSET(socket_fd, read_fd_set) != 0)
+            {
+                accept_connection();
+            }
+
+            // Clear the selector trigger pipe
+            if (FD_ISSET(selector_trigger[sys::PIPE_READ_END], read_fd_set) != 0)
+            {
+                char trigger_byte;
+                ssize_t read_count = 0;
+                do
+                {
+                    read_count = read(selector_trigger[sys::PIPE_READ_END], &trigger_byte, 1);
+                }
+                while (read_count >= 0 || (read_count == -1 && errno == EINTR));
+            }
+
+            // Perform pending client I/O operations
+            {
+                std::unique_lock<std::mutex> lock(com_queue_lock);
+
+                NetClient* client = com_queue.get_first();
+                NetClient* next_client = nullptr;
+                while (client != nullptr)
+                {
+                    // The client may be removed from the queue during I/O operations,
+                    // so get_next_node() must be executed before any I/O operations
+                    next_client = client->get_next_node();
+
+                    if (client->current_phase == NetClient::Phase::CANCELED)
+                    {
+                        close_connection(client);
+                    }
+                    else
+                    if (FD_ISSET(client->socket_fd, read_fd_set) != 0)
+                    {
+                        // Client ready for receive
+                        bool recv_complete = receive_message(client);
+                        if (recv_complete)
+                        {
+                            client->current_phase = client->next_phase;
+
+                            if (client->current_phase == NetClient::Phase::CANCELED)
+                            {
+                                close_connection(client);
+                            }
+                            else
+                            if (client->current_phase == NetClient::Phase::PENDING)
+                            {
+                                com_queue.remove(client);
+                                client->io_state = NetClient::IoOp::NOOP;
+
+                                std::unique_lock<std::mutex> action_lock(action_queue_lock);
+                                action_queue.add_last(client);
+                                thread_pool.notify();
+                            }
+                        }
+                    }
+                    else
+                    if (FD_ISSET(client->socket_fd, write_fd_set) != 0)
+                    {
+                        // Client ready for send
+                        bool send_complete = send_message(client);
+                        if (send_complete)
+                        {
+                            client->current_phase = client->next_phase;
+
+                            if (client->current_phase == NetClient::Phase::CANCELED)
+                            {
+                                close_connection(client);
+                            }
+                            else
+                            if (client->current_phase == NetClient::Phase::RECV)
+                            {
+                                client->clear_io_buffer();
+                                client->next_phase = NetClient::Phase::PENDING;
+                                client->io_state = NetClient::IoOp::READ;
+                            }
+                        }
+                    }
+
+                    client = next_client;
+                }
+            }
+        }
+        else
+        if (errno != EINTR)
         {
             throw OsException(OsException::ErrorId::IO_ERROR);
-        }
-
-        // Accept pending connections
-        if (FD_ISSET(socket_fd, read_fd_set) != 0)
-        {
-            accept_connection();
-        }
-
-        // Clear the selector trigger pipe
-        if (FD_ISSET(selector_trigger[sys::PIPE_READ_END], read_fd_set) != 0)
-        {
-            char trigger_byte;
-            ssize_t read_count = 0;
-            do
-            {
-                read_count = read(selector_trigger[sys::PIPE_READ_END], &trigger_byte, 1);
-            }
-            while (read_count >= 0 || (read_count == -1 && errno == EINTR));
-        }
-
-        // Perform pending client I/O operations
-        {
-            std::unique_lock<std::mutex> lock(com_queue_lock);
-
-            NetClient* client = com_queue.get_first();
-            NetClient* next_client = nullptr;
-            while (client != nullptr)
-            {
-                // The client may be removed from the queue during I/O operations,
-                // so get_next_node() must be executed before any I/O operations
-                next_client = client->get_next_node();
-
-                if (client->current_phase == NetClient::Phase::CANCELED)
-                {
-                    close_connection(client);
-                }
-                else
-                if (FD_ISSET(client->socket_fd, read_fd_set) != 0)
-                {
-                    // Client ready for receive
-                    bool recv_complete = receive_message(client);
-                    if (recv_complete)
-                    {
-                        client->current_phase = client->next_phase;
-
-                        if (client->current_phase == NetClient::Phase::CANCELED)
-                        {
-                            close_connection(client);
-                        }
-                        else
-                        if (client->current_phase == NetClient::Phase::PENDING)
-                        {
-                            com_queue.remove(client);
-                            client->io_state = NetClient::IoOp::NOOP;
-
-                            std::unique_lock<std::mutex> action_lock(action_queue_lock);
-                            action_queue.add_last(client);
-                            thread_pool.notify();
-                        }
-                    }
-                }
-                else
-                if (FD_ISSET(client->socket_fd, write_fd_set) != 0)
-                {
-                    // Client ready for send
-                    bool send_complete = send_message(client);
-                    if (send_complete)
-                    {
-                        client->current_phase = client->next_phase;
-
-                        if (client->current_phase == NetClient::Phase::CANCELED)
-                        {
-                            close_connection(client);
-                        }
-                        else
-                        if (client->current_phase == NetClient::Phase::RECV)
-                        {
-                            client->clear_io_buffer();
-                            client->next_phase = NetClient::Phase::PENDING;
-                            client->io_state = NetClient::IoOp::READ;
-                        }
-                    }
-                }
-
-                client = next_client;
-            }
         }
     }
 }
 
-// Caller must hold the com_queue_lock
+// Caller must hold the com_queue_lock to avoid concurrent close of the selector_trigger pipe
+// by the cleanup() method
 void ServerConnector::wakeup_selector()
 {
     if (selector_trigger[sys::PIPE_WRITE_END] != sys::FD_NONE)
@@ -272,7 +277,7 @@ void ServerConnector::wakeup_selector()
         ssize_t write_length = 0;
         do
         {
-            write_length = write(selector_trigger[sys::PIPE_WRITE_END], &SELECTOR_TRIGGER_BYTE, 1);
+            write_length = write(selector_trigger[sys::PIPE_WRITE_END], &ufh::WAKEUP_TRIGGER_BYTE, 1);
         }
         while (write_length == -1 && errno == EINTR);
     }
@@ -296,7 +301,8 @@ void ServerConnector::cleanup()
     // Notify worker threads to close connections of clients that are currently being processed
     {
         std::unique_lock<std::mutex> com_lock(com_queue_lock);
-        stop_flag = true;
+        stop_signal->disable_wakeup_fd();
+        stop_signal->signal();
 
         for (NetClient* client = com_queue.remove_first(); client != nullptr; client = com_queue.remove_first())
         {
@@ -474,7 +480,7 @@ void ServerConnector::process_action_queue() noexcept
             {
                 // Continue client I/O
                 std::unique_lock<std::mutex> com_lock(com_queue_lock);
-                if (!stop_flag)
+                if (!stop_signal->is_signaled())
                 {
                     com_queue.add_last(client);
 

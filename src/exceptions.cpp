@@ -86,6 +86,7 @@ const char* const OsException::DSC_IO_ERROR             = "I/O error";
 const char* const OsException::DSC_NBLK_IO_ERROR        = "Non-blocking I/O initialization failed";
 const char* const OsException::DSC_IPC_ERROR            = "IPC setup failed";
 const char* const OsException::DSC_DYN_LOAD_ERROR       = "Dynamic loader/linker failed";
+const char* const OsException::DSC_SIGNAL_HND_ERROR     = "Signal handler setup failed";
 
 OsException::OsException() noexcept
 {
@@ -124,6 +125,9 @@ const char* OsException::get_error_description() const noexcept
             break;
         case ErrorId::DYN_LOAD_ERROR:
             description = DSC_DYN_LOAD_ERROR;
+            break;
+        case ErrorId::SIGNAL_HND_ERROR:
+            description = DSC_SIGNAL_HND_ERROR;
             break;
         case ErrorId::UNKNOWN:
             // fall-through
