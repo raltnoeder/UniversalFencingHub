@@ -19,19 +19,24 @@ extern "C"
     #include <sys/socket.h>
 }
 
-constexpr const size_t   ServerConnector::MAX_CONNECTIONS            = 24;
-constexpr const size_t   ServerConnector::MAX_CONNECTION_BACKLOG     = 24;
-constexpr const int      ServerConnector::SOCKET_FD_NONE             = -1;
+const size_t   ServerConnector::MAX_CONNECTIONS             = 24;
+const size_t   ServerConnector::MAX_CONNECTION_BACKLOG      = 24;
+const int      ServerConnector::SOCKET_FD_NONE              = -1;
 
-constexpr const size_t ServerConnector::NetClient::IO_BUFFER_SIZE    = 256;
+const size_t ServerConnector::NetClient::IO_BUFFER_SIZE     = 1024;
+const size_t ServerConnector::NetClient::FIELD_SIZE         = 1024;
+const size_t ServerConnector::NetClient::NODE_NAME_SIZE     = 255;
 
 // @throws std::bad_alloc, InetException
 ServerConnector::ServerConnector(
+    Server* const server_ref,
     const CharBuffer& protocol_string,
     const CharBuffer& ip_string,
     const CharBuffer& port_string
 )
 {
+    ufh_server = server_ref;
+
     if (protocol_string == keyword::PROTO_IPV6)
     {
         socket_domain = AF_INET6;
@@ -54,12 +59,16 @@ ServerConnector::ServerConnector(
     {
         struct sockaddr_in6* inet_address = reinterpret_cast<struct sockaddr_in6*> (address);
         parse_ipv6(ip_string, port_string, *inet_address);
+
+        clients_init_ipv6();
     }
     else
     if (socket_domain == AF_INET)
     {
         struct sockaddr_in* inet_address = reinterpret_cast<struct sockaddr_in*> (address);
         parse_ipv4(ip_string, port_string, *inet_address);
+
+        clients_init_ipv4();
     }
 
     read_fd_set_mgr = std::unique_ptr<fd_set>(new fd_set);
@@ -75,8 +84,14 @@ ServerConnector::~ServerConnector() noexcept
     close_fd(socket_fd);
 }
 
-ServerConnector::NetClient::NetClient()
+// @throws std::bad_alloc
+ServerConnector::NetClient::NetClient():
+    key_buffer(FIELD_SIZE),
+    value_buffer(FIELD_SIZE),
+    node_name(NODE_NAME_SIZE)
 {
+    io_buffer_mgr = std::unique_ptr<char[]>(new char[IO_BUFFER_SIZE]);
+    io_buffer = io_buffer_mgr.get();
 }
 
 ServerConnector::NetClient::~NetClient()
@@ -91,6 +106,9 @@ void ServerConnector::NetClient::clear() noexcept
     io_state        = IoOp::NOOP;
     header.clear();
     have_header     = false;
+    node_name.wipe();
+    key_buffer.wipe();
+    value_buffer.wipe();
     clear_io_buffer();
 }
 
@@ -157,8 +175,14 @@ void ServerConnector::run(WorkerPool& thread_pool)
             // Add the server socket to the read-selectable set
             if (com_queue.get_size() < MAX_CONNECTIONS)
             {
+                std::cout << "ServerConnector: Adding server with socket_fd = " << socket_fd <<
+                    " to read_fd_set" << std::endl;
                 FD_SET(socket_fd, read_fd_set);
                 max_fd = socket_fd;
+            }
+            else
+            {
+                std::cout << "ServerConnector: com_queue is full, size = " << com_queue.get_size() << std::endl;
             }
 
             // Add active clients to the read/write sets
@@ -166,12 +190,16 @@ void ServerConnector::run(WorkerPool& thread_pool)
             {
                 if (client->io_state == NetClient::IoOp::READ)
                 {
+                    std::cout << "ServerConnector: Adding client with socket_fd = " << client->socket_fd <<
+                        " to read_fd_set" << std::endl;
                     FD_SET(client->socket_fd, read_fd_set);
                     max_fd = std::max(max_fd, client->socket_fd);
                 }
                 else
                 if (client->io_state == NetClient::IoOp::WRITE)
                 {
+                    std::cout << "ServerConnector: Adding client with socket_fd = " << client->socket_fd <<
+                        " to write_fd_set" << std::endl;
                     FD_SET(client->socket_fd, write_fd_set);
                     max_fd = std::max(max_fd, client->socket_fd);
                 }
@@ -190,6 +218,7 @@ void ServerConnector::run(WorkerPool& thread_pool)
         {
             throw OsException(OsException::ErrorId::IO_ERROR);
         }
+        std::cout << "ServerConnector: select() triggered" << std::endl;
 
         // Accept pending connections
         if (FD_ISSET(socket_fd, read_fd_set) != 0)
@@ -256,14 +285,26 @@ void ServerConnector::accept_connection()
 {
     try
     {
+        std::cout << "ServerConnector: Allocating client object" << std::endl;
         ClientAlloc::scope_ptr new_client = client_pool.allocate_scope();
         NetClient* new_client_ptr = new_client.get();
+        if (new_client_ptr == nullptr)
+        {
+            throw std::bad_alloc();
+        }
+        std::cout << "ServerConnector: Initializing client object" << std::endl;
+        std::cout << "ServerConnector: Client clear()" << std::endl;
         new_client_ptr->clear();
+        std::cout << "ServerConnector: Client accept()" << std::endl;
         new_client_ptr->socket_fd = accept(socket_fd, new_client_ptr->address, &(new_client_ptr->address_length));
+        std::cout << "ServerConnector: Client assign socket_domain" << std::endl;
         new_client_ptr->socket_domain = socket_domain;
+        std::cout << "ServerConnector: Client assign io_state" << std::endl;
         new_client_ptr->io_state = NetClient::IoOp::READ;
+        std::cout << "ServerConnector: Client assign current_phase" << std::endl;
         new_client_ptr->current_phase = NetClient::Phase::RECV;
 
+        std::cout << "ServerConnector: Queueing client object" << std::endl;
         {
             std::unique_lock<std::mutex> lock(com_queue_lock);
             com_queue.add_last(new_client_ptr);
@@ -273,6 +314,7 @@ void ServerConnector::accept_connection()
     }
     catch (std::bad_alloc&)
     {
+        std::cout << "ServerConnector: Client object allocation failed" << std::endl;
         // No free NetClient objects
         // TODO: Log implementation error, this section should not be reached,
         //       since MAX_CONNECTIONS == client_pool size
@@ -282,11 +324,12 @@ void ServerConnector::accept_connection()
 // Caller must have locked the client_queue_lock
 void ServerConnector::close_connection(NetClient* const client)
 {
+    std::cout << "ServerConnector: close_connection() client socket_fd = " << client->socket_fd << std::endl;
     close_fd(client->socket_fd);
-    client->clear();
 
     com_queue.remove(client);
 
+    client->clear();
     client_pool.deallocate(client);
 }
 
@@ -295,7 +338,7 @@ bool ServerConnector::receive_message(NetClient* const client)
     bool pending_flag = false;
 
     const size_t req_read_size = client->io_offset < MsgHeader::HEADER_SIZE ?
-        MsgHeader::HEADER_SIZE - MsgHeader::HEADER_SIZE :
+        MsgHeader::HEADER_SIZE - client->io_offset :
         NetClient::IO_BUFFER_SIZE - client->io_offset;
     const ssize_t read_size = recv(
         client->socket_fd,
@@ -306,12 +349,14 @@ bool ServerConnector::receive_message(NetClient* const client)
     if (read_size == -1)
     {
         // IO Error
+        std::cout << "ServerConnector: receive_message(): I/O error" << std::endl;
         close_connection(client);
     }
     else
     if (read_size == 0)
     {
         // End of stream
+        std::cout << "ServerConnector: receive_message(): End of stream" << std::endl;
         close_connection(client);
     }
     else
@@ -339,6 +384,8 @@ bool ServerConnector::receive_message(NetClient* const client)
             )
         );
         client->have_header = true;
+        std::cout << "ServerConnector: Message type = " << client->header.msg_type << ", data length = " <<
+            client->header.data_length << std::endl;
     }
     return pending_flag;
 }
@@ -377,6 +424,7 @@ void ServerConnector::send_message(NetClient* const client)
     else
     if (write_size == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
     {
+        std::cout << "ServerConnector: send_message(): I/O error" << std::endl;
         close_connection(client);
     }
 }
@@ -400,13 +448,19 @@ void ServerConnector::process_action_queue() noexcept
             std::cout << "Thread " << std::this_thread::get_id() << " is handling client with socket_fd = " <<
                 client->socket_fd << std::endl;
 
-            client->current_phase = NetClient::Phase::CANCELED;
-            client->io_state = NetClient::IoOp::NOOP;
+            client->current_phase = NetClient::Phase::EXECUTING;
+            process_client_message(client);
 
-            // Continue client I/O
+            if (client->current_phase == NetClient::Phase::RECV || client->current_phase == NetClient::Phase::SEND)
             {
+                // Continue client I/O
                 std::unique_lock<std::mutex> com_lock(com_queue_lock);
                 com_queue.add_last(client);
+            }
+            else
+            {
+                // End client communication
+                close_connection(client);
             }
 
             action_queue_lock.lock();
@@ -419,29 +473,116 @@ void ServerConnector::process_action_queue() noexcept
     }
 }
 
-void ServerConnector::test()
+// @throws ProtocolException
+void ServerConnector::process_client_message(NetClient* const client)
 {
-    const int test_count = 5;
-
-    for (int idx = 0; idx < test_count; ++idx)
+    switch (static_cast<msgtype> (client->header.msg_type))
     {
-        ClientAlloc::scope_ptr current_client = client_pool.allocate_scope();
-        current_client->socket_fd = idx;
-        std::cout << "Queueing client with socket_fd = " << current_client->socket_fd << std::endl;
-        com_queue.add_last(current_client.get());
-        current_client.release();
+        case msgtype::ECHO_REQUEST:
+            break;
+        case msgtype::VERSION_REQUEST:
+            break;
+        case msgtype::POWER_OFF:
+            fence_action(&Server::action_power_off, client);
+        case msgtype::POWER_ON:
+            fence_action(&Server::action_power_off, client);
+        case msgtype::REBOOT:
+            fence_action(&Server::action_power_off, client);
+        case msgtype::FENCE_SUCCESS:
+            // fall-through
+        case msgtype::FENCE_FAIL:
+            // fall-through
+        case msgtype::ECHO_REPLY:
+            // fall-through
+        default:
+            throw ProtocolException();
+            break;
     }
-    std::cout << '\n';
-    for (int idx = 0; idx < test_count; ++idx)
-    {
-        ClientAlloc::scope_ptr current_client = client_pool.make_scope_ptr(com_queue.remove_first());
-        std::cout << "Dequeued client with socket_fd = " << current_client->socket_fd << std::endl;
-    }
-    std::cout << '\n';
+}
 
-    std::cout << "ServerConnector socket_domain = " << socket_domain << ", " <<
-        "address_length = " << address_length << '\n' <<
-        std::endl;
+void ServerConnector::fence_action(const Server::fence_action_method fence, NetClient* const client)
+{
+    try
+    {
+        size_t field_offset = client->header.HEADER_SIZE;
+        while (field_offset < client->io_offset)
+        {
+            protocol::read_field(client->io_buffer, client->io_offset, field_offset, client->key_buffer);
+            protocol::split_key_value_pair(client->key_buffer, client->value_buffer);
+            if (client->key_buffer == protocol::NODE_NAME)
+            {
+                client->node_name = client->value_buffer;
+            }
+        }
+
+        client->clear_io_buffer();
+        client->header.clear();
+        if (client->node_name.length() > 0)
+        {
+            bool success_flag = (ufh_server->*fence)(client->node_name);
+
+            client->header.msg_type = success_flag ?
+                static_cast<uint16_t> (msgtype::FENCE_SUCCESS) :
+                static_cast<uint16_t> (msgtype::FENCE_FAIL);
+            client->header.field_value_to_bytes(
+                client->header.msg_type, client->io_buffer, MsgHeader::MSG_TYPE_OFFSET
+            );
+            client->header.field_value_to_bytes(
+                client->header.data_length, client->io_buffer, MsgHeader::DATA_LENGTH_OFFSET
+            );
+            client->current_phase = NetClient::Phase::SEND;
+            client->io_state = NetClient::IoOp::WRITE;
+        }
+    }
+    catch (ProtocolException&)
+    {
+        client->current_phase = NetClient::Phase::CANCELED;
+        client->io_state = NetClient::IoOp::NOOP;
+    }
+}
+
+// @throws std::bad_alloc
+void ServerConnector::clients_init_ipv4()
+{
+    const size_t pool_size = client_pool.get_pool_size();
+    const size_t alloc_size = sizeof (struct sockaddr_in);
+    for (size_t idx = 0; idx < pool_size; ++idx)
+    {
+        NetClient* client = client_pool.object_at_index(idx);
+        if (client != nullptr)
+        {
+            client->socket_domain = AF_INET;
+            client->address_mgr = std::unique_ptr<char[]>(new char[alloc_size]);
+            client->address = reinterpret_cast<struct sockaddr*> (client->address_mgr.get());
+            client->address_length = alloc_size;
+        }
+        else
+        {
+            throw std::logic_error("client_init_ipv4(): Implementation error: client_pool returned nullptr");
+        }
+    }
+}
+
+// @throws std::bad_alloc
+void ServerConnector::clients_init_ipv6()
+{
+    const size_t pool_size = client_pool.get_pool_size();
+    const size_t alloc_size = sizeof (struct sockaddr_in6);
+    for (size_t idx = 0; idx < pool_size; ++idx)
+    {
+        NetClient* client = client_pool.object_at_index(idx);
+        if (client != nullptr)
+        {
+            client->socket_domain = AF_INET6;
+            client->address_mgr = std::unique_ptr<char[]>(new char[alloc_size]);
+            client->address = reinterpret_cast<struct sockaddr*> (client->address_mgr.get());
+            client->address_length = alloc_size;
+        }
+        else
+        {
+            throw std::logic_error("client_init_ipv6(): Implementation error: client_pool returned nullptr");
+        }
+    }
 }
 
 void ServerConnector::close_fd(int& fd) noexcept
