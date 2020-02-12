@@ -1,8 +1,8 @@
 #include "MsgHeader.h"
 
-constexpr const size_t MsgHeader::HEADER_SIZE           = 4;
-constexpr const size_t MsgHeader::MSG_TYPE_OFFSET       = 0;
-constexpr const size_t MsgHeader::DATA_LENGTH_OFFSET    = 2;
+constexpr size_t MsgHeader::HEADER_SIZE         = 4;
+constexpr size_t MsgHeader::MSG_TYPE_OFFSET     = 0;
+constexpr size_t MsgHeader::DATA_LENGTH_OFFSET  = 2;
 
 MsgHeader::MsgHeader()
 {
