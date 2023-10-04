@@ -4,6 +4,8 @@
 #include "zero_memory.h"
 #include "exceptions.h"
 
+#include "socket_setup.h"
+
 extern "C"
 {
     #include <errno.h>
@@ -79,6 +81,8 @@ void ClientConnector::connect_to_server()
     {
         throw InetException(InetException::ErrorId::UNKNOWN_AF);
     }
+
+    socket_setup::set_dscp(socket_fd, socket_domain, socket_setup::DSCP_CLASS_5);
 
     // Connect to the selected peer
     if (connect(socket_fd, address, address_length) != 0)

@@ -100,6 +100,7 @@ void ServerConnector::init()
     }
 
     socket_setup::set_no_linger(socket_fd);
+    socket_setup::set_dscp(socket_fd, socket_domain, socket_setup::DSCP_CLASS_5);
 
     if (bind(socket_fd, address, address_length) != 0)
     {
@@ -337,6 +338,8 @@ void ServerConnector::accept_connection()
         new_client_ptr->io_state = NetClient::IoOp::READ;
         new_client_ptr->current_phase = NetClient::Phase::RECV;
         new_client_ptr->next_phase = NetClient::Phase::PENDING;
+
+        socket_setup::set_dscp(new_client_ptr->socket_fd, new_client_ptr->socket_domain, socket_setup::DSCP_CLASS_5);
 
         {
             std::unique_lock<std::mutex> lock(com_queue_lock);
