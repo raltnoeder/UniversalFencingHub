@@ -37,14 +37,6 @@ namespace socket_setup
         if (dscp <= 0x3F)
         {
             const unsigned int field_value = dscp << 2;
-            if (socket_domain == AF_INET)
-            {
-                setsockopt(
-                    socket_fd, IPPROTO_IP, IP_TOS,
-                    static_cast<const void*> (&field_value), sizeof (field_value)
-                );
-            }
-            else
             if (socket_domain == AF_INET6)
             {
                 setsockopt(
@@ -52,6 +44,10 @@ namespace socket_setup
                     static_cast<const void*> (&field_value), sizeof (field_value)
                 );
             }
+            setsockopt(
+                socket_fd, IPPROTO_IP, IP_TOS,
+                static_cast<const void*> (&field_value), sizeof (field_value)
+            );
         }
     }
 }
