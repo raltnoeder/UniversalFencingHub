@@ -5,6 +5,7 @@
 #include <integerparse.h>
 #include <cstring>
 #include "Shared.h"
+#include "socket_setup.h"
 
 // @throws InetException
 static uint16_t parse_port_number(const CharBuffer& port_string)
@@ -31,7 +32,7 @@ void parse_ipv4(const CharBuffer& ip_string, const CharBuffer& port_string, stru
     uint16_t port_number = parse_port_number(port_string);
     int rc = inet_pton(AF_INET, ip_string.c_str(), &(address.sin_addr));
     check_inet_pton_rc(rc);
-    
+
     address.sin_family = AF_INET;
     address.sin_port = htons(port_number);
 }
@@ -45,7 +46,7 @@ void parse_ipv6(const CharBuffer& ip_string, const CharBuffer& port_string, stru
 
     address.sin6_family = AF_INET6;
     address.sin6_port = htons(port_number);
-    address.sin6_flowinfo = 0;
+    address.sin6_flowinfo = socket_setup::DSCP_CLASS_5 << 2;
     address.sin6_scope_id = 0;
 }
 
